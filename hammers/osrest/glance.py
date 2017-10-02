@@ -31,7 +31,14 @@ def image(auth, id):
     return image
 
 
-def image_create(auth, name, *, disk_format='qcow2', container_format='bare', visibility='private', extra=None):
+# def image_create(auth, name, *, disk_format='qcow2', container_format='bare', visibility='private', extra=None):
+# <py2 kwargs compat>
+def image_create(auth, name, **kwargs):
+    disk_format = kwargs.get('disk_format', 'qcow2')
+    container_format = kwargs.get('container_format', 'bare')
+    visibility = kwargs.get('visibility', 'private')
+    extra = kwargs.get('extra', None)
+# </py2 kwargs compat>
     if extra is None:
         extra = {}
 
@@ -40,8 +47,9 @@ def image_create(auth, name, *, disk_format='qcow2', container_format='bare', vi
         'disk_format': disk_format,
         'container_format': container_format,
         'visibility': visibility,
-        **extra,
+        # **extra,
     }
+    data.update(extra)
     response = requests.post(
         url=auth.endpoint('image') + '/v2/images',
         headers={
@@ -80,7 +88,13 @@ def image_untag(auth, id, tag):
     response.raise_for_status()
 
 
-def image_properties(auth, id, *, add=None, remove=None, replace=None):
+#def image_properties(auth, id, *, add=None, remove=None, replace=None):
+# <py2 kwargs compat>
+def image_properties(auth, id, **kwargs):
+    add = kwargs.get('add', None)
+    remove = kwargs.get('remove', None)
+    replace = kwargs.get('replace', None)
+# </py2 kwargs compat>
     patch = []
     if add is not None:
         for key, value in add.items():

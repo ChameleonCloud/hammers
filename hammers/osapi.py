@@ -67,7 +67,12 @@ class Auth(object):
     }
 
     @classmethod
-    def from_env_or_args(cls, *, args=None, env=True):
+    # def from_env_or_args(cls, *, args=None, env=True):
+    # <py2 kwargs compat>
+    def from_env_or_args(cls, **kwargs):
+        args = kwargs.get('args', None)
+        env = kwargs.get('env', True)
+    # </py2 kwargs compat>
         """
         Combine the provided *args* (if provided) with the environment vars
         (if *env*, default true) and produce an Auth object for use by REST
