@@ -62,6 +62,15 @@ def lease_delete(auth, lease_id):
     return response
 
 
+__all__ = [
+    'blazar_host',
+    'blazar_hosts',
+    'blazar_host_update',
+    'blazar_leases',
+    'blazar_lease',
+    'blazar_lease_delete',
+]
+
 blazar_host = host
 blazar_hosts = hosts
 blazar_host_update = host_update

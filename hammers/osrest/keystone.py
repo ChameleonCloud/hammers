@@ -1,7 +1,7 @@
 import requests
 
 
-def keystone_project(auth, id):
+def project(auth, id):
     response = requests.get(
         url=auth.endpoint('identityv3') + '/projects/{}'.format(id),
         headers={'X-Auth-Token': auth.token},
@@ -11,7 +11,7 @@ def keystone_project(auth, id):
     return project
 
 
-def keystone_projects(auth, **params):
+def projects(auth, **params):
     """
     Example params: 'name', 'enabled', or stuff from
     https://developer.openstack.org/api-ref/identity/v3/?expanded=list-projects-detail#list-projects
@@ -27,7 +27,7 @@ def keystone_projects(auth, **params):
     return projects
 
 
-def keystone_project_lookup(auth, name_or_id):
+def project_lookup(auth, name_or_id):
     try:
         return keystone_project(auth, name_or_id)
     except requests.HTTPError:
@@ -43,7 +43,7 @@ def keystone_project_lookup(auth, name_or_id):
     return project
 
 
-def keystone_user(auth, id):
+def user(auth, id):
     response = requests.get(
         url=auth.endpoint('identityv3') + '/users/{}'.format(id),
         headers={'X-Auth-Token': auth.token},
@@ -53,7 +53,7 @@ def keystone_user(auth, id):
     return user
 
 
-def keystone_users(auth, enabled=None, name=None):
+def users(auth, enabled=None, name=None):
     params = {}
     if name is not None:
         params['name'] = name
@@ -71,7 +71,7 @@ def keystone_users(auth, enabled=None, name=None):
     return users
 
 
-def keystone_user_lookup(auth, name_or_id):
+def user_lookup(auth, name_or_id):
     try:
         return keystone_user(auth, name_or_id)
     except requests.HTTPError:
@@ -85,3 +85,20 @@ def keystone_user_lookup(auth, name_or_id):
 
     id, user = users.popitem()
     return user
+
+
+__all__ = [
+    'keystone_project',
+    'keystone_projects',
+    'keystone_project_lookup',
+    'keystone_user',
+    'keystone_users',
+    'keystone_user_lookup',
+]
+
+keystone_project = project
+keystone_projects = projects
+keystone_project_lookup = project_lookup
+keystone_user = user
+keystone_users = users
+keystone_user_lookup = user_lookup

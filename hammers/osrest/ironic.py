@@ -1,7 +1,7 @@
 import requests
 
 
-def ironic_node(auth, node):
+def node(auth, node):
     if isinstance(node, dict):
         node = node['uuid']
 
@@ -17,7 +17,7 @@ def ironic_node(auth, node):
     return data
 
 
-def ironic_node_set_state(auth, node, state):
+def node_set_state(auth, node, state):
     if isinstance(node, dict):
         node = node['uuid']
 
@@ -35,7 +35,7 @@ def ironic_node_set_state(auth, node, state):
 
 # def ironic_node_update(auth, node, *, add=None, remove=None, replace=None):
 # <python 2 compat>
-def ironic_node_update(auth, node, **kwargs):
+def node_update(auth, node, **kwargs):
     add = kwargs.get('add')
     remove = kwargs.get('remove')
     replace = kwargs.get('replace')
@@ -61,7 +61,7 @@ def ironic_node_update(auth, node, **kwargs):
     return data
 
 
-def ironic_nodes(auth, details=False):
+def nodes(auth, details=False):
     path = '/v1/nodes' if not details else '/v1/nodes/detail'
     response = requests.get(
         url=auth.endpoint('baremetal') + path,
@@ -76,7 +76,7 @@ def ironic_nodes(auth, details=False):
     return {n['uuid']: n for n in data['nodes']}
 
 
-def ironic_ports(auth):
+def ports(auth):
     response = requests.get(
         url=auth.endpoint('baremetal') + '/v1/ports/detail',
         headers={
@@ -88,3 +88,18 @@ def ironic_ports(auth):
     data = response.json()
 
     return {n['uuid']: n for n in data['ports']}
+
+
+__all__ = [
+    'ironic_node',
+    'ironic_node_set_state',
+    'ironic_node_update',
+    'ironic_nodes',
+    'ironic_ports',
+]
+
+ironic_node = node
+ironic_node_set_state = node_set_state
+ironic_node_update = node_update
+ironic_nodes = nodes
+ironic_ports = ports
