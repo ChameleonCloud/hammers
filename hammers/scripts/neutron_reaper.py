@@ -108,6 +108,9 @@ def main(argv=None):
         help='Quiet mode. No output if there was nothing to do.')
     parser.add_argument('--slack', type=str,
         help='JSON file with Slack webhook information to send a notification to')
+    parser.add_argument('-d', '--dbversion', type=str,
+        help='Version of the database. Schemas differ, pick the appropriate one.',
+        choices=[query.LIBERTY, query.OCATA], default=query.LIBERTY)
     parser.add_argument('type', choices=list(RESOURCE_QUERY),
         help='Grab floating IPs or ports?')
     parser.add_argument('idle_days', type=float,
@@ -128,6 +131,7 @@ def main(argv=None):
             whitelist = {normalize_project_name(line) for line in f}
 
     db = mysqlargs.connect()
+    db.version = args.dbversion
 
     remove_count = reaper(db, args.type, args.idle_days, whitelist,
         describe=args.info, quiet=args.quiet)

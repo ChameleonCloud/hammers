@@ -2,11 +2,28 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import functools
 
+LIBERTY = 'liberty'
+OCATA = 'ocata'
 QUERIES = {}
+
+
 def query(q):
     global QUERIES
     QUERIES[q.__name__] = {'f': q}
     return q
+
+
+def project_col(version):
+    '''
+    The name of the column changed somewhere between L and O.
+
+    Should be pretty basic to avoid any SQL injection.
+    '''
+    # might also be sensitive to the component (neutron/nova/etc.)
+    return {
+        LIBERTY: 'tenant_id',
+        OCATA: 'project_id',
+    }[version]
 
 
 @query
@@ -19,7 +36,7 @@ def idle_projects(db):
     sql = '''
     SELECT project.id
          , project.name
-        #  , Count(ip.tenant_id)
+        #  , Count(ip.{projcol})
          , (SELECT deleted_at
             FROM   nova.instances AS instance
             WHERE  instance.project_id = project.id
@@ -28,7 +45,7 @@ def idle_projects(db):
                 AS latest_deletion
     FROM   neutron.floatingips AS ip
        ,   keystone.project AS project
-    WHERE  ip.tenant_id = project.id
+    WHERE  ip.{projcol} = project.id
            AND ip.status = "down"
            AND (SELECT Count(*)
                 FROM   nova.instances
@@ -37,9 +54,9 @@ def idle_projects(db):
                        AND deleted_at IS NULL
                        AND vm_state != "deleted"
                        AND vm_state != "error") = 0
-    GROUP  BY tenant_id
-    ORDER  BY Count(tenant_id) DESC;
-    '''
+    GROUP  BY {projcol}
+    ORDER  BY Count({projcol}) DESC;
+    '''.format(projcol=project_col(db.version))
     return db.query(sql, limit=None)
 
 
@@ -55,10 +72,10 @@ def owned_ips(db, project_ids):
     sql = '''
     SELECT id
          , status
-         , tenant_id AS project_id
+         , {projcol} AS project_id
     FROM   neutron.floatingips
-    WHERE  tenant_id IN %s;
-    '''
+    WHERE  {projcol} IN %s;
+    '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_ids], limit=None)
 
 
@@ -70,22 +87,22 @@ def owned_ip_single(db, project_id):
     sql = '''
     SELECT id
          , status
-         , tenant_id AS project_id
+         , {projcol} AS project_id
     FROM   neutron.floatingips
-    WHERE  tenant_id = %s;
-    '''
+    WHERE  {projcol} = %s;
+    '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_id], limit=None)
 
 
 @query
-def projects_with_unowned_ports(db):
+def projects_with_unowned_ports(db, version='liberty'):
     sql = '''
-    SELECT tenant_id AS project_id
-         , count(tenant_id) AS count_blank_owner
+    SELECT {projcol} AS project_id
+         , count({projcol}) AS count_blank_owner
     FROM   neutron.ports
     WHERE  device_owner = ''
-    GROUP  BY tenant_id;
-    '''
+    GROUP  BY {projcol};
+    '''.format(projcol=project_col(db.version))
     return db.query(sql, limit=None)
 
 
@@ -94,10 +111,10 @@ def owned_ports_single(db, project_id):
     sql = '''
     SELECT id
          , status
-         , tenant_id AS project_id
+         , {projcol} AS project_id
     FROM   neutron.ports
-    WHERE  tenant_id = %s;
-    '''
+    WHERE  {projcol} = %s;
+    '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_id], limit=None)
 
 

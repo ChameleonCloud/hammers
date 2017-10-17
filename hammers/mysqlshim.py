@@ -3,6 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import itertools
 
+from .query import LIBERTY
 
 __all__ = ['MySqlShim']
 
@@ -18,6 +19,7 @@ class MySqlShim(object):
 
         self.db = MySQLdb.connect(**connect_args)
         self.cursor = self.db.cursor()
+        self.version = LIBERTY
 
     def columns(self):
         return [cd[0] for cd in self.cursor.description]
