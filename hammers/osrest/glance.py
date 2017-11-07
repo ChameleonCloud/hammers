@@ -20,7 +20,20 @@ def images(auth, query=None):
     return images
 
 
-def image(auth, id):
+def image(auth, id=None, name=None):
+    """
+    Looks up image by id or name. If name is not unique, an error is raised.
+    """
+    if id is None and name is None:
+        raise ValueError('must specify name or id')
+    if id is None:
+        matches = images(auth, query={'name': name})
+        if len(matches) < 1:
+            raise RuntimeError('no images found with name "{}"'.format(name))
+        elif len(matches) > 1:
+            raise RuntimeError('multiple images ({}) found with name "{}"'.format(len(matches), name))
+        id = matches[0]['id']
+
     response = requests.get(
         url=auth.endpoint('image') + '/v2/images/{}'.format(id),
         headers={'X-Auth-Token': auth.token},
@@ -91,6 +104,17 @@ def image_untag(auth, id, tag):
 #def image_properties(auth, id, *, add=None, remove=None, replace=None):
 # <py2 kwargs compat>
 def image_properties(auth, id, **kwargs):
+    """
+    Add/remove/replace properties on the image. Some standard properties can
+    be modified (name, visibility), some can't (id, checksum), but custom
+    fields can be whatever.
+
+    Keyword Parameters
+    ------------------
+    add : mapping
+    remove : iterable
+    replace : mapping
+    """
     add = kwargs.get('add', None)
     remove = kwargs.get('remove', None)
     replace = kwargs.get('replace', None)
