@@ -1,8 +1,31 @@
+import collections
 import requests
 
 
+def floatingip_delete(auth, floatingip):
+    if isinstance(floatingip, collections.Mapping):
+        floatingip = floatingip['id']
+
+    response = requests.delete(
+        url=auth.endpoint('network') + '/v2.0/floatingips/{}'.format(floatingip),
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    return response # 204 No Content is normal.
+
+
+def floatingips(auth):
+    response = requests.get(
+        url=auth.endpoint('network') + '/v2.0/floatingips',
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    fips = response.json()['floatingips']
+    return {fip['id']: fip for fip in fips}
+
+
 def port_delete(auth, port):
-    if isinstance(port, dict):
+    if isinstance(port, collections.Mapping):
         port = port['id']
 
     response = requests.delete(

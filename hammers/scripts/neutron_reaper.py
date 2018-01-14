@@ -10,8 +10,10 @@ from pprint import pprint
 
 from MySQLdb import ProgrammingError
 
-from hammers import MySqlArgs, query
+from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
+
+OS_ENV_PREFIX = 'OS_'
 
 RESOURCE_QUERY = {
     'ip': query.owned_ip_single,
@@ -19,8 +21,8 @@ RESOURCE_QUERY = {
 }
 
 RESOURCE_DELETE_COMMAND = {
-    'ip': 'floatingip-delete',
-    'port': 'port-delete',
+    'ip': osrest.neutron.floatingip_delete,
+    'port': osrest.neutron.port_delete,
 }
 
 assert set(RESOURCE_QUERY) == set(RESOURCE_DELETE_COMMAND)
@@ -34,7 +36,7 @@ def days_past(dt):
     return (datetime.datetime.utcnow() - dt).total_seconds() / (60*60*24)
 
 
-def reaper(db, type_, idle_days, whitelist, describe=False, quiet=False):
+def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
     try:
         future_projects = {
             normalize_project_name(row['project_id'])
@@ -53,7 +55,8 @@ def reaper(db, type_, idle_days, whitelist, describe=False, quiet=False):
         for proj
         in query.idle_projects(db)
         if (
-            days_past(proj['latest_deletion']) > idle_days
+            proj['latest_deletion'] is not None
+            and days_past(proj['latest_deletion']) > idle_days
             and normalize_project_name(proj['id']) not in future_projects
             and normalize_project_name(proj['id']) not in whitelist
             and normalize_project_name(proj['name']) not in whitelist
@@ -68,7 +71,10 @@ def reaper(db, type_, idle_days, whitelist, describe=False, quiet=False):
     if not describe:
         for proj_id in too_idle_project_ids:
             for resource in resource_query(db, proj_id):
-                print('{} {}'.format(command, resource['id']))
+                # print('{} {}'.format(command, resource['id']))
+                # TODO replace SQL query by looking at floating IP data from
+                # the HTTP endpoint
+                command(auth, resource['id'])
                 n_things_to_remove += 1
     else:
         projects = collections.defaultdict(dict)
@@ -89,8 +95,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Floating IP reclaimer. Run '
-        'by itself as a "dry run," or pipe it to the Neutron client.')
+    parser = argparse.ArgumentParser(description='Floating IP and port reclaimer.')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -98,6 +103,7 @@ def main(argv=None):
         'port': 3306,
     })
     mysqlargs.inject(parser)
+    osapi.add_arguments(parser)
 
     parser.add_argument('-w', '--whitelist', type=str,
         help='File of project/tenant IDs/names to ignore, one per line. '
@@ -119,9 +125,10 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
+    auth = osapi.Auth.from_env_or_args(args=args)
 
     if args.slack:
-        slack = Slackbot(args.slack)
+        slack = Slackbot(args.slack, script_name='neutron-reaper')
     else:
         slack = None
 
@@ -133,8 +140,20 @@ def main(argv=None):
     db = mysqlargs.connect()
     db.version = args.dbversion
 
-    remove_count = reaper(db, args.type, args.idle_days, whitelist,
-        describe=args.info, quiet=args.quiet)
+    kwargs = {
+        'db': db,
+        'auth': auth,
+        'type_': args.type,
+        'idle_days': args.idle_days,
+        'whitelist': whitelist,
+        'describe': args.info,
+        'quiet': args.quiet,
+    }
+    if slack:
+        with slack: # log exceptions
+            remove_count = reaper(**kwargs)
+    else:
+        remove_count = reaper(**kwargs)
 
     if slack and (not args.info) and ((not args.quiet) or remove_count):
         thing = '{}{}'.format(

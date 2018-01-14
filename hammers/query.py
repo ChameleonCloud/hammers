@@ -32,6 +32,9 @@ def idle_projects(db):
     Returns rows enumerating all projects that are currently idle (number
     of running instances = 0). Also provides since when the project has been
     idle (when the latest running instance was deleted)
+
+    There may be NULLs emitted for "latest_deletion" if a project hasn't ever
+    had an instance (like an admin project...).
     '''
     sql = '''
     SELECT project.id

@@ -5,6 +5,7 @@ import codecs
 import json
 import socket
 import sys
+import traceback
 
 import requests
 
@@ -13,7 +14,7 @@ from hammers import colors
 
 
 class Slackbot(object):
-    def __init__(self, settings_file):
+    def __init__(self, settings_file, script_name=None):
         with codecs.open(settings_file, 'r', encoding='utf-8') as f:
             self.settings = json.load(f)
 
@@ -26,6 +27,7 @@ class Slackbot(object):
         except KeyError:
             host = '({})'.format(host)
         self.host = host
+        self.script_name = script_name
 
     def post(self, script, payload, color='#ccc'):
         if color.startswith('xkcd:'):
@@ -54,3 +56,11 @@ class Slackbot(object):
             print('Non-OK ({}) response from Slack: {}'.format(
                 response.status_code, response.content[:400]), file=sys.stderr)
         return response
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, etype, value, tb):
+        '''Context manager logs exceptions in Slack (doesn't suppress)'''
+        error_lines = traceback.format_exception(etype, value, tb)
+        self.post(self.script_name, ''.join(error_lines), color='xkcd:red')
