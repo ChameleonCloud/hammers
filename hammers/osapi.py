@@ -90,10 +90,33 @@ class Auth(object):
         missing_vars = self.required_os_vars - set(rc)
         if missing_vars:
             raise RuntimeError('Missing required OS values: {}'.format(missing_vars))
+        self._find_keystone2_root()
         self.authenticate()
 
+    def _find_keystone2_root(self):
+        '''Sometimes the OS_AUTH_URL is missing the v2.0 suffix for some
+        reason. Hopefully asking the root endpoint will always tell us
+        where it really is.
+        '''
+        response = requests.get(self.rc['OS_AUTH_URL'])
+        data = response.json()
+
+        if 'version' in data:
+            data['versions'] = {'values': data['version']}
+        for version in data['versions']['values']:
+            if version['id'] != 'v2.0':
+                continue
+            for link in version['links']:
+                if link.get('rel') == 'self':
+                    self._keystone2_root = link['href']
+                    return
+            else:
+                raise RuntimeError('could not find self-link among v2 data'.format(data))
+        else:
+            raise RuntimeError('could not find Keystone v2 root')
+
     def authenticate(self):
-        response = requests.post(self.rc['OS_AUTH_URL'] + '/tokens', json={
+        response = requests.post(self._keystone2_root + '/tokens', json={
         'auth': {
             'passwordCredentials': {
                 'username': self.rc['OS_USERNAME'],
