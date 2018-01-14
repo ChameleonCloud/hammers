@@ -62,5 +62,6 @@ class Slackbot(object):
 
     def __exit__(self, etype, value, tb):
         '''Context manager logs exceptions in Slack (doesn't suppress)'''
-        error_lines = traceback.format_exception(etype, value, tb)
-        self.post(self.script_name, ''.join(error_lines), color='xkcd:red')
+        if etype is not None:
+            error_lines = traceback.format_exception(etype, value, tb)
+            self.post(self.script_name, ''.join(error_lines), color='xkcd:red')
