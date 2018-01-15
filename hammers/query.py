@@ -36,12 +36,12 @@ def idle_projects(db):
     There may be NULLs emitted for "latest_deletion" if a project hasn't ever
     had an instance (like an admin project...).
     '''
-    sql = '''
+    sql_template = '''
     SELECT project.id
          , project.name
         #  , Count(ip.{projcol})
          , (SELECT deleted_at
-            FROM   nova.instances AS instance
+            FROM   {novatable}.instances AS instance
             WHERE  instance.project_id = project.id
             ORDER  BY deleted_at DESC
             LIMIT  1)
@@ -51,7 +51,7 @@ def idle_projects(db):
     WHERE  ip.{projcol} = project.id
            AND ip.status = "down"
            AND (SELECT Count(*)
-                FROM   nova.instances
+                FROM   {novatable}.instances
                     AS instance
                 WHERE  instance.project_id = project.id
                        AND deleted_at IS NULL
@@ -59,8 +59,42 @@ def idle_projects(db):
                        AND vm_state != "error") = 0
     GROUP  BY {projcol}
     ORDER  BY Count({projcol}) DESC;
-    '''.format(projcol=project_col(db.version))
-    return db.query(sql, limit=None)
+    '''
+
+    projcol = project_col(db.version)
+    old_sql = sql_template.format(projcol=projcol, novatable='nova')
+
+    if db.version == 'ocata':
+        # smash together data from two databases. newer openstack split the database
+        # into nova (legacy?) and nova_cell0 (new schema? distributed?)
+        new_sql = sql_template.format(projcol=projcol, novatable='nova_cell0')
+
+        merged = list(db.query(old_sql, limit=None)) + list(db.query(new_sql, limit=None))
+
+        latest_for_project = {}
+        for row in merged:
+            if row['id'] in latest_for_project:
+                # no date = ignore
+                if latest_for_project[row['id']] is None:
+                    # already ignored
+                    continue
+                if row['latest_deletion'] is None:
+                    # ignored from now on
+                    latest_for_project[row['id']]['latest_deletion'] = None
+                    continue
+                latest_for_project[row['id']]['latest_deletion'] = max(
+                    # otherwise get latest
+                    row['latest_deletion'],
+                    latest_for_project[row['id']]['latest_deletion']
+                )
+            else:
+                latest_for_project[row['id']] = row
+
+        results = [row for row in latest_for_project.values() if row['latest_deletion']]
+        return results
+
+    else:
+        return db.query(old_sql, limit=None)
 
 
 @query
