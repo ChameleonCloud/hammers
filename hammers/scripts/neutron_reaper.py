@@ -128,7 +128,7 @@ def main(argv=None):
     mysqlargs.extract(args)
     auth = osapi.Auth.from_env_or_args(args=args)
 
-    if args.type == 'port' and args.dbversion == 'ocata':
+    if args.action == 'delete' and args.type == 'port' and args.dbversion == 'ocata':
         print('Checking ports on Ocata isn\'t validated, refusing to '
               'automatically delete.', file=sys.stderr)
         sys.exit(1)
