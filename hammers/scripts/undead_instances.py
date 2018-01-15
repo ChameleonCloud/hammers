@@ -119,6 +119,15 @@ def main(argv=None):
             print('  Instance: {}'.format(node['instance_uuid']))
             print('  State:    {}'.format(node['provision_state']))
 
+        if slack:
+            if unbound_instances:
+                message = '{} nodes with dead instances (no action taken)'.format(len(unbound_instances))
+                color = 'xkcd:orange red'
+            else:
+                message = 'No nodes with dead instances.'
+                color = 'xkcd:green'
+            slack.post(SUBCOMMAND, message, color=color)
+
     elif args.mode == 'delete':
         if not args.force_sane or args.force_insane:
             # sanity check(s) to avoid doing something stupid

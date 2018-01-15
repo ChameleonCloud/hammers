@@ -104,6 +104,15 @@ def main(argv=None):
             print('Neutron Port Details:')
             pprint(neut_port)
 
+        if slack:
+            if conflict_macs:
+                message = '{} conflicting MACs (no action taken)'.format(len(conflict_macs))
+                color = 'xkcd:orange red'
+            else:
+                message = 'No conflicting MACs.'
+                color = 'xkcd:green'
+            slack.post(SUBCOMMAND, message, color=color)
+
     elif args.mode == 'delete':
         if not args.force_sane:
             # sanity check, make sure we don't go crazy

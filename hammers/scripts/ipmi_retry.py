@@ -225,6 +225,29 @@ def main(argv=None):
                     'maintenance',
                 ]
             ))
+        if slack:
+            if cureable:
+                message = ('{} nodes in correctable error states'
+                           .format(len(cureable)))
+                color = 'xkcd:orange red'
+            else:
+                error_nodes = sum(1
+                    for (nid, n)
+                    in nodes.items()
+                    if (
+                        not n['maintenance'] and
+                        n['provision_state'] == 'error'
+                    )
+                )
+                if error_nodes:
+                    message = ('No nodes in correctable error states ({} other'
+                               ' nodes in error state)').format(error_nodes)
+                    color = 'xkcd:yellow'
+                else:
+                    message = 'No nodes in correctable error states'
+                    color = 'xkcd:green'
+
+            slack.post(SUBCOMMAND, message, color=color)
         return
 
     if len(cureable) == 0:
