@@ -227,8 +227,8 @@ def main(argv=None):
             ))
         if slack:
             if cureable:
-                message = ('{} nodes in correctable error states'
-                           .format(len(cureable)))
+                message = ('{} nodes in correctable error states (no action '
+                           'taken)'.format(len(cureable)))
                 color = 'xkcd:orange red'
             else:
                 error_nodes = sum(1

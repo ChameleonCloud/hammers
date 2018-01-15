@@ -102,7 +102,7 @@ class Auth(object):
         data = response.json()
 
         if 'version' in data:
-            data['versions'] = {'values': data['version']}
+            data['versions'] = {'values': [data['version']]}
         for version in data['versions']['values']:
             if version['id'] != 'v2.0':
                 continue

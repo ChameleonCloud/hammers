@@ -121,7 +121,8 @@ def main(argv=None):
 
         if slack:
             if unbound_instances:
-                message = '{} nodes with dead instances (no action taken)'.format(len(unbound_instances))
+                message = ('{} nodes with dead instances (no action taken)'
+                           .format(len(unbound_instances)))
                 color = 'xkcd:orange red'
             else:
                 message = 'No nodes with dead instances.'
