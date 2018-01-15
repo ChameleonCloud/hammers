@@ -108,8 +108,6 @@ def main(argv=None):
     parser.add_argument('-w', '--whitelist', type=str,
         help='File of project/tenant IDs/names to ignore, one per line. '
              'Ignores case and dashes.')
-    parser.add_argument('-i', '--info', action='store_true',
-        help='Rather than print Neutron commands, print out info about them.')
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
     parser.add_argument('--slack', type=str,
@@ -117,6 +115,9 @@ def main(argv=None):
     parser.add_argument('-d', '--dbversion', type=str,
         help='Version of the database. Schemas differ, pick the appropriate one.',
         choices=[query.LIBERTY, query.OCATA], default=query.LIBERTY)
+
+    parser.add_argument('action', choices=['info', 'delete'],
+        help='Just display info or actually delete them?')
     parser.add_argument('type', choices=list(RESOURCE_QUERY),
         help='Grab floating IPs or ports?')
     parser.add_argument('idle_days', type=float,
@@ -126,6 +127,11 @@ def main(argv=None):
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
     auth = osapi.Auth.from_env_or_args(args=args)
+
+    if args.type == 'port' and args.dbversion == 'ocata':
+        print('Checking ports on Ocata isn\'t validated, refusing to '
+              'automatically delete.', file=sys.stderr)
+        sys.exit(1)
 
     if args.slack:
         slack = Slackbot(args.slack, script_name='neutron-reaper')
@@ -146,7 +152,7 @@ def main(argv=None):
         'type_': args.type,
         'idle_days': args.idle_days,
         'whitelist': whitelist,
-        'describe': args.info,
+        'describe': args.action == 'info',
         'quiet': args.quiet,
     }
     if slack:
@@ -155,7 +161,7 @@ def main(argv=None):
     else:
         remove_count = reaper(**kwargs)
 
-    if slack and (not args.info) and ((not args.quiet) or remove_count):
+    if slack and (args.action == 'delete') and ((not args.quiet) or remove_count):
         thing = '{}{}'.format(
             {'ip': 'floating IP', 'port': 'port'}[args.type],
             ('' if remove_count == 1 else 's'),
