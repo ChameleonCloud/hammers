@@ -1,3 +1,4 @@
+configparser # backport from 3 to 2, optional 3.5+
 mysqlclient
 python-dateutil
 requests

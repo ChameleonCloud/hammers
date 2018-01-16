@@ -24,6 +24,27 @@ def floatingips(auth):
     return {fip['id']: fip for fip in fips}
 
 
+def network(auth, net):
+    if isinstance(net, collections.Mapping):
+        net = net['id']
+    response = requests.get(
+        url=auth.endpoint('network') + '/v2.0/networks/{}'.format(net),
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    return response.json()['network']
+
+
+def networks(auth):
+    response = requests.get(
+        url=auth.endpoint('network') + '/v2.0/networks',
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    nets = response.json()['networks']
+    return {net['id']: net for net in nets}
+
+
 def port_delete(auth, port):
     if isinstance(port, collections.Mapping):
         port = port['id']
@@ -44,6 +65,27 @@ def ports(auth):
     response.raise_for_status()
     data = response.json()
     return {n['id']: n for n in data['ports']}
+
+
+def subnet(auth, subnet):
+    if isinstance(subnet, collections.Mapping):
+        subnet = subnet['id']
+    response = requests.get(
+        url=auth.endpoint('network') + '/v2.0/subnets/{}'.format(subnet),
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    return response.json()['subnet']
+
+
+def subnets(auth):
+    response = requests.get(
+        url=auth.endpoint('network') + '/v2.0/subnets',
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    subnets = response.json()['subnets']
+    return {subnet['id']: subnet for subnet in subnets}
 
 
 __all__ = [

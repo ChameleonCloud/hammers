@@ -1,6 +1,7 @@
 # coding: utf-8
 from __future__ import absolute_import, print_function, unicode_literals
 
+import contextlib
 import functools
 
 
@@ -19,6 +20,13 @@ def drop_prefix(s, start):
     if s[:l] != start:
         raise ValueError('string does not start with expected value')
     return s[l:]
+
+
+# 3.7+ has https://bugs.python.org/issue10049
+@contextlib.contextmanager
+def nullcontext(*args, **kwargs):
+    "With ``with``, wiff (do nothing)"
+    yield
 
 
 if __name__ == '__main__':

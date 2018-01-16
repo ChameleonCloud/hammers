@@ -29,6 +29,10 @@ class Slackbot(object):
         self.host = host
         self.script_name = script_name
 
+    def message(self, payload, color='#ccc'):
+        '''Newer version of ``post()`` that omits the script name'''
+        return self.post(self.script_name, payload, color=color)
+
     def post(self, script, payload, color='#ccc'):
         if color.startswith('xkcd:'):
             color = colors.XKCD_COLORS[color[5:]]
