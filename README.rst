@@ -8,13 +8,15 @@ Collection of various tools to keep things ship-shape. Not particularly bright t
 
 1. Neutron resource reaper
 
-  ``neutron-reaper {ip, port} <grace-days> [--info]``
+  ``neutron-reaper {info, delete} {ip, port} <grace-days> [ --dbversion ocata ]``
 
   Reclaims idle floating IPs and cleans up stale ports.
 
 2. Conflicting Ironic/Neutron MACs
 
-  ``conflict-macs {info, delete}``
+  ``conflict-macs {info, delete} ( --ignore-from-ironic-config <path to ironic.conf> | --ignore-subnet <subnet UUID> )``
+
+  The Ironic subnet must be provided---directly via ID or determined from a config---otherwise the script would think that they are in conflict.
 
 3. Undead Instances clinging to nodes
 
@@ -32,7 +34,6 @@ Common options:
 
 * ``--slack <json-options>`` - if provided, used to post notifications to Slack
 * ``--osrc <rc-file>`` - alternate way to feed in the OS authentication vars
-
 
 Setup/Config
 ============
@@ -89,7 +90,7 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
     minute => 25,
   }
   cron { 'hammers-conflictmacs':
-    command => "$venv_bin/conflict-macs info --slack $slack_json_loc --osrc $osrc_loc 2>&1 | /usr/bin/logger -t hammers-conflictmacs",
+    command => "$venv_bin/conflict-macs info --slack $slack_json_loc --osrc $osrc_loc --ignore-from-ironic-conf /etc/ironic/ironic.conf 2>&1 | /usr/bin/logger -t hammers-conflictmacs",
     user => 'root',
     hour => 5,
     minute => 30,

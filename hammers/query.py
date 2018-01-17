@@ -97,6 +97,36 @@ def idle_projects(db):
         return db.query(old_sql, limit=None)
 
 
+_LATEST_INSTANCE_DATABASES = {
+    'nova',
+    'nova_cell0',
+}
+
+@query
+def latest_instance_interaction(db, nova_db_name='nova'):
+    '''
+    Get the latest interaction date with instances on the target database name.
+    Combine as you so desire.
+    '''
+    if nova_db_name not in _LATEST_INSTANCE_DATABASES:
+        # can't parameterize a database name
+        raise RuntimeError('invalid database selection')
+
+    sql = '''\
+    SELECT
+        proj.name,
+        proj.id,
+        MAX(IFNULL(deleted_at,
+                IFNULL(updated_at, created_at))) AS latest_interaction
+    FROM
+        {nova_db_name}.instances AS inst
+            INNER JOIN
+        keystone.project AS proj ON inst.project_id = proj.id
+    GROUP BY project_id;
+    '''.format(nova_db_name=nova_db_name)
+    return db.query(sql, limit=None)
+
+
 @query
 def owned_ips(db, project_ids):
     '''

@@ -50,19 +50,32 @@ def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
         else:
             raise
 
-    too_idle_projects = [
-        proj
-        for proj
-        in query.idle_projects(db)
-        if (
-            proj['latest_deletion'] is not None
-            and days_past(proj['latest_deletion']) > idle_days
-            and normalize_project_name(proj['id']) not in future_projects
-            and normalize_project_name(proj['id']) not in whitelist
-            and normalize_project_name(proj['name']) not in whitelist
-        )
+    project_last_seen = {}
+    for db_name in ['nova', 'nova_cell0']:
+        for row in query.latest_instance_interaction(db, 'nova'):
+            proj_id = normalize_project_name(row['id'])
+            if (proj_id in whitelist
+                    or row['name'] in whitelist
+                    or proj_id in future_projects):
+                # skip
+                continue
+            try:
+                already_last_seen = project_last_seen[proj_id]
+            except KeyError:
+                # new ID
+                project_last_seen[proj_id] = row['latest_interaction']
+            else:
+                # existing ID, keep the max date
+                project_last_seen[proj_id] = max(row['latest_interaction'], already_last_seen)
+
+    too_idle_project_ids = [
+        proj_id
+        for proj_id, last_seen
+        in project_last_seen.items()
+        if days_past(last_seen) > idle_days
     ]
-    too_idle_project_ids = [proj['id'] for proj in too_idle_projects]
+    # too_idle_project_ids = [proj['id'] for proj in too_idle_projects]
+    pprint(too_idle_project_ids)
 
     resource_query = RESOURCE_QUERY[type_]
     command = RESOURCE_DELETE_COMMAND[type_]
