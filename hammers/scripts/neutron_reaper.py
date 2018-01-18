@@ -52,7 +52,7 @@ def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
 
     project_last_seen = {}
     for db_name in ['nova', 'nova_cell0']:
-        for row in query.latest_instance_interaction(db, 'nova'):
+        for row in query.latest_instance_interaction(db, db_name):
             proj_id = normalize_project_name(row['id'])
             if (proj_id in whitelist
                     or row['name'] in whitelist
@@ -75,20 +75,29 @@ def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
         if days_past(last_seen) > idle_days
     ]
     # too_idle_project_ids = [proj['id'] for proj in too_idle_projects]
-    pprint(too_idle_project_ids)
+    #pprint(too_idle_project_ids)
 
     resource_query = RESOURCE_QUERY[type_]
     command = RESOURCE_DELETE_COMMAND[type_]
 
     n_things_to_remove = 0
     if not describe:
+        to_delete = []
+        not_down = [] # should be empty, otherwise fail.
         for proj_id in too_idle_project_ids:
+            # TODO replace SQL query by looking at floating IP data from
+            # the HTTP endpoint
             for resource in resource_query(db, proj_id):
-                # print('{} {}'.format(command, resource['id']))
-                # TODO replace SQL query by looking at floating IP data from
-                # the HTTP endpoint
-                command(auth, resource['id'])
-                n_things_to_remove += 1
+                to_delete.append(resource['id'])
+                if resource['status'] != 'DOWN':
+                    not_down.append(resource)
+        if not_down:
+            raise RuntimeError('error: not all {}s selected are in "DOWN" state'
+                               '.\n\n{}'.format(type_, not_down))
+        for resource_id in to_delete:
+            command(auth, resource_id)
+            n_things_to_remove += 1
+
     else:
         projects = collections.defaultdict(dict)
         for proj_id in too_idle_project_ids:
