@@ -37,11 +37,19 @@ class MySqlArgs(object):
             help='Database port, ignored for local connections as the UNIX socket '
                  'is used. (defaulting to "%(default)s")',
         )
+        parser.add_argument('--service-conf', type=str,
+            help='Configuration file to scrape connection details from. Overrides '
+                 'other settings.'
+        )
 
     def extract(self, args):
         pwd = args.password
+        # remove quotes if they got pulled into the argument
         if pwd and len(pwd) > 1 and pwd[0] == pwd[-1] and pwd[0] in '\'\"':
             pwd = pwd[1:-1]
+
+        if args.service_conf:
+            pass # TODO
 
         self.connect_kwargs = {
             'user': args.db_user,

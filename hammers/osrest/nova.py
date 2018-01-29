@@ -137,6 +137,16 @@ def availabilityzones(auth):
     return zones
 
 
+def availabilityzones(auth):
+    response = requests.get(
+        url=auth.endpoint('compute') + '/os-availability-zone/detail',
+        headers={'X-Auth-Token': auth.token},
+    )
+    response.raise_for_status()
+    zones = response.json()[u'availabilityZoneInfo']
+    return zones
+
+
 __all__ = [
     'nova_hypervisors',
     'nova_instance',

@@ -1,6 +1,9 @@
 import requests
 
 
+_API_VERSION = '1.20'
+
+
 def node(auth, node):
     if isinstance(node, dict):
         node = node['uuid']
@@ -9,7 +12,7 @@ def node(auth, node):
         url=auth.endpoint('baremetal') + '/v1/nodes/{}'.format(node),
         headers={
             'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': '1.9',
+            'X-OpenStack-Ironic-API-Version': _API_VERSION,
         },
     )
     response.raise_for_status()
@@ -26,7 +29,7 @@ def node_set_state(auth, node, state):
         json={'target': state},
         headers={
             'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': '1.9',
+            'X-OpenStack-Ironic-API-Version': _API_VERSION,
         },
     )
     response.raise_for_status()
@@ -52,7 +55,7 @@ def node_update(auth, node, **kwargs):
         url=auth.endpoint('baremetal') + '/v1/nodes/{}'.format(node),
         headers={
             'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': '1.9',
+            'X-OpenStack-Ironic-API-Version': _API_VERSION,
         },
         json=patch,
     )
@@ -67,7 +70,7 @@ def nodes(auth, details=False):
         url=auth.endpoint('baremetal') + path,
         headers={
             'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': '1.9',
+            'X-OpenStack-Ironic-API-Version': _API_VERSION,
         },
     )
     response.raise_for_status()
@@ -81,7 +84,7 @@ def ports(auth):
         url=auth.endpoint('baremetal') + '/v1/ports/detail',
         headers={
             'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': '1.9',
+            'X-OpenStack-Ironic-API-Version': _API_VERSION,
         },
     )
     response.raise_for_status()

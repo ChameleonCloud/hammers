@@ -201,6 +201,16 @@ def future_reservations(db):
     return db.query(sql, limit=None)
 
 
+@query
+def clear_ironic_port_internalinfo(db, port_id):
+    sql = '''\
+    UPDATE ports
+    SET    internal_info = '{}'
+    WHERE  uuid = %s;
+    '''
+    return db.query(sql, args=[port_id])
+
+
 def main(argv):
     import sys
     import argparse
