@@ -204,7 +204,7 @@ def future_reservations(db):
 @query
 def clear_ironic_port_internalinfo(db, port_id):
     sql = '''\
-    UPDATE ports
+    UPDATE ironic.ports
     SET    internal_info = '{}'
     WHERE  uuid = %s;
     '''

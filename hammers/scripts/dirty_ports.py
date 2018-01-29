@@ -58,6 +58,7 @@ def identify_dirty_ports(auth):
 def clean_ports(db, ports):
     for port in ports:
         query.clear_ironic_port_internalinfo(db, port['uuid'])
+    db.db.commit()
 
 
 def cleaner(auth, db, take_action, quiet=True, slack=None):
@@ -71,7 +72,7 @@ def cleaner(auth, db, take_action, quiet=True, slack=None):
         if bad_ports:
             message = ('{} ports with "`internal_info`" data on "`available`" nodes.{}\n{}'.format(
                 len(bad_ports),
-                '' if quiet else ' (Read-only mode, no action to be taken)',
+                '' if take_action else ' (Read-only mode, no action to be taken)',
                 '\n'.join(
                     ' • port `{uuid}` on node `{node_uuid}`'.format(**p)
                     for p
@@ -115,7 +116,7 @@ def main(argv=None):
     osapi.add_arguments(parser)
 
     parser.add_argument('-q', '--quiet', action='store_true',
-        help='Quiet mode. No output if there was nothing to do.')
+        help='Quiet mode. No output to Slack if there was nothing to do.')
     parser.add_argument('--slack', type=str,
         help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('action', choices=['info', 'clean'],
