@@ -233,6 +233,8 @@ def main(argv):
     parser.add_argument('qargs', type=str, nargs='*',
         help='Arguments for the query (if needed)'
     )
+    parser.add_argument('--commit', action='store_true',
+        help='Commit the connection after the query')
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
@@ -248,8 +250,13 @@ def main(argv):
         if '{}() takes'.format(args.query) in str(e):
             print('Invalid number of arguments provided to query: {}'.format(str(e)), file=sys.stderr)
             return -1
+        elif "'NoneType' object is not iterable" in str(e):
+            print('No output from query.')
         else:
             raise
+
+    if args.commit:
+        db.db.commit()
 
 
 if __name__ == '__main__':
