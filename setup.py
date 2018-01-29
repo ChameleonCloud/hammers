@@ -24,6 +24,7 @@ setup(
         'console_scripts': [
             'conflict-macs = hammers.scripts.conflict_macs:main',
             'curiouser = hammers.scripts.curiouser:main',
+            'dirty-ports = hammers.scripts.dirty_ports:main',
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
             'retry-ipmi = hammers.scripts.ipmi_retry:main',
