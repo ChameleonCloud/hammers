@@ -79,7 +79,7 @@ def cleaner(auth, db, take_action, quiet=True, slack=None):
                 ),
             ))
             color = 'xkcd:darkish red'
-        else if not quiet:
+        elif not quiet:
             message = 'No ports with "`internal_info`" data on "`available`" nodes.'
             color = 'xkcd:light grey'
         else:
