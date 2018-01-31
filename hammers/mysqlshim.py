@@ -25,7 +25,23 @@ class MySqlShim(object):
         return [cd[0] for cd in self.cursor.description]
 
     def query(self, *cargs, **ckwargs):
+        '''
+        Parameters not listed are passed into the :py:func:`cursor.execute`
+        function. One notable one would be ``args`` for parameterized queries.
+
+        Keyword Parameters
+        -------------------
+        no_rows : bool
+            Executes the query and returns the number of rows updated.
+
+        immediate : bool
+            If true, immediately runs the query and puts it into a list.
+            Otherwise, an iterator is returned.
+        '''
         limit = ckwargs.pop('limit', self.limit)
+
+        if ckwargs.pop('no_rows', False):
+            return self._query_no_rows(*cargs, **ckwargs)
 
         if ckwargs.pop('immediate', False):
             return list(itertools.islice(self._query(*cargs, **ckwargs), limit))
@@ -33,12 +49,7 @@ class MySqlShim(object):
             return itertools.islice(self._query(*cargs, **ckwargs), limit)
 
     def _query(self, *cargs, **ckwargs):
-        modified_rows = self.cursor.execute(*cargs, **ckwargs)
-
-        if self.cursor.description is None:
-            # UPDATE's and INSERT's don't have a description
-            yield {'updated_rows': modified_rows}
-            return
+        self.cursor.execute(*cargs, **ckwargs)
 
         fields = self.columns()
         rows = self.cursor.fetchmany(self.batch_size)
@@ -46,3 +57,8 @@ class MySqlShim(object):
             for row in rows:
                 yield dict(zip(fields, row))
             rows = self.cursor.fetchmany(self.batch_size)
+
+    def _query_no_rows(self, *cargs, **ckwargs):
+        # split function as _query is a generator, this isn't, so doesn't
+        # need to be consumed
+        return self.cursor.execute(*cargs, **ckwargs)

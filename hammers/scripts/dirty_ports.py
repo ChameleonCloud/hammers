@@ -57,8 +57,8 @@ def identify_dirty_ports(auth):
 
 def clean_ports(db, ports):
     for port in ports:
-        result = query.clear_ironic_port_internalinfo(db, port['uuid'])
-        assert result[0]['updated_rows'] == 1
+        updated_rows = query.clear_ironic_port_internalinfo(db, port['uuid'])
+        assert updated_rows == 1
     db.db.commit()
 
 

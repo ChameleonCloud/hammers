@@ -209,7 +209,7 @@ def clear_ironic_port_internalinfo(db, port_id):
     SET    internal_info = '{}'
     WHERE  uuid = %s;
     '''
-    return db.query(sql, args=[port_id], immediate=True)
+    return db.query(sql, args=[port_id], no_rows=True)
 
 
 def main(argv):
