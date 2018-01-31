@@ -33,7 +33,13 @@ class MySqlShim(object):
             return itertools.islice(self._query(*cargs, **ckwargs), limit)
 
     def _query(self, *cargs, **ckwargs):
-        self.cursor.execute(*cargs, **ckwargs)
+        modified_rows = self.cursor.execute(*cargs, **ckwargs)
+
+        if self.cursor.description is None:
+            # UPDATE's and INSERT's don't have a description
+            yield {'updated_rows': modified_rows}
+            return
+
         fields = self.columns()
         rows = self.cursor.fetchmany(self.batch_size)
         while rows:

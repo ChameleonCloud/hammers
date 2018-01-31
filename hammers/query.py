@@ -8,6 +8,7 @@ QUERIES = {}
 
 
 def query(q):
+    '''Decorator to include all the queries into a dictionary'''
     global QUERIES
     QUERIES[q.__name__] = {'f': q}
     return q

@@ -1,6 +1,16 @@
 # coding: utf-8
 from __future__ import absolute_import, print_function, unicode_literals
 
+try:
+    import configparser # 3.x
+except ImportError:
+    from backports import configparser # 2.x 3rd party
+try:
+    from urllib.parse import urlparse # 3.x
+except ImportError:
+    from urlparse import urlparse # 2.x
+
+
 from . import MyCnf, MySqlShim
 
 __all__ = ['MySqlArgs']
@@ -38,25 +48,36 @@ class MySqlArgs(object):
                  'is used. (defaulting to "%(default)s")',
         )
         parser.add_argument('--service-conf', type=str,
-            help='Configuration file to scrape connection details from. Overrides '
-                 'other settings.'
+            help='Configuration file to scrape connection details from. '
+                 'Overrides other settings if provided. Looks for section '
+                 '"database" with key "connection"'
         )
 
     def extract(self, args):
-        pwd = args.password
-        # remove quotes if they got pulled into the argument
-        if pwd and len(pwd) > 1 and pwd[0] == pwd[-1] and pwd[0] in '\'\"':
-            pwd = pwd[1:-1]
-
         if args.service_conf:
-            pass # TODO
+            cp = configparser.ConfigParser()
+            with open(args.service_conf, mode='r') as f:
+                cp.read_file(f)
 
-        self.connect_kwargs = {
-            'user': args.db_user,
-            'passwd': pwd,
-            'host': args.host,
-            'port': args.port,
-        }
+            parts = urlparse(cp['database']['connection'])
+            self.connect_kwargs = {
+                'user': parts.username,
+                'passwd': parts.password,
+                'host': parts.hostname,
+                'port': parts.port or 3306,
+            }
+        else:
+            pwd = args.password
+            # remove quotes if they got pulled into the argument
+            if pwd and len(pwd) > 1 and pwd[0] == pwd[-1] and pwd[0] in '\'\"':
+                pwd = pwd[1:-1]
+
+            self.connect_kwargs = {
+                'user': args.db_user,
+                'passwd': pwd,
+                'host': args.host,
+                'port': args.port,
+            }
 
     def connect(self):
         return MySqlShim(**self.connect_kwargs)
