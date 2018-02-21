@@ -2,6 +2,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import argparse
+import collections
 import configparser
 import json
 import os
@@ -66,7 +67,7 @@ def main(argv=None):
 
     # Do actual work
     with slack or nullcontext():
-        conflict_macs = find_conflicts(auth, ignore_subnets)
+        conflict_macs = find_conflicts(auth, ignore_subnets, slack=slack)
 
         if args.mode == 'info':
             show_info(conflict_macs, slack=slack)
@@ -78,7 +79,7 @@ def main(argv=None):
             return -1
 
 
-def find_conflicts(auth, ignore_subnets):
+def find_conflicts(auth, ignore_subnets, slack=None):
     nodes = osrest.ironic_nodes(auth)
     ports = osrest.ironic_ports(auth)
     neut_ports = osrest.neutron_ports(auth)
@@ -102,7 +103,35 @@ def find_conflicts(auth, ignore_subnets):
 
     neut_macs = set(neut_mac_map)
 
-    assert len(neut_macs) == len(neut_mac_map) == len(serious_neut_ports)
+    # there would be fewer in the neut_mac_map if there were collisions on
+    # the mac address
+    if len(neut_mac_map) != len(serious_neut_ports):
+        macs = (port['mac_address'] for port in serious_neut_ports.values())
+        mac_collisions = [
+            (mac, count)
+            for mac, count
+            in collections.Counter(macs).items()
+            if count > 1
+        ]
+        message_lines = []
+        for mac_collision, count in mac_collisions:
+            bad_ports = (
+                pid
+                for pid, port
+                in serious_neut_ports.items()
+                if port['mac_address'] == mac_collision
+            )
+            message_lines.append('- mac {}, ports: {}'.format(
+                mac_collision,
+                ', '.join(bad_ports)
+            ))
+            neut_macs.remove(mac_collision)
+        message = ('conflict of mac addresses among neutron ports, ignoring '
+                   'some mac addresses:\n{}'
+                   .format('\n'.join(message_lines)))
+        print(message, file=sys.stderr)
+        if slack:
+            slack.message(message, color='xkcd:bright red')
 
     inactive_nodes = {
         nid: node
@@ -177,7 +206,7 @@ def delete(auth, conflict_macs, verbose=False, safe=True, slack=None):
                 )
             )
             color = 'xkcd:darkish red'
-        elif args.verbose:
+        elif verbose:
             message = 'No visible Ironic/Neutron MAC conflicts'
             color = 'xkcd:light grey'
         else:
