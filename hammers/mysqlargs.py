@@ -17,6 +17,16 @@ __all__ = ['MySqlArgs']
 
 
 class MySqlArgs(object):
+    """
+    Argument manager that combines command-line arguments with configuration
+    files to determine MySQL connection info including the username, password,
+    hostname, and port.
+
+    The `defaults` provided take the lowest priority. If any value is found
+    among the configuration files with a higher priority, it overrides it. The
+    key names used are ``user``, ``password``, ``host``, and ``port``.
+
+    """
     def __init__(self, defaults, mycnfpaths=None):
         mycnf = MyCnf(mycnfpaths)
 
@@ -30,6 +40,17 @@ class MySqlArgs(object):
         self.defaults = defaults
 
     def inject(self, parser):
+        """
+        Adds arguments to a :py:class:`argparse.ArgumentParser`.
+
+        * ``-u``/``--db-user``
+        * ``-p``/``--password``
+        * ``-H``/``--host``
+        * ``-P``/``--port``
+        * ``--service-conf``: A configuration file like ``/etc/ironic/ironic.conf``
+          that contains a database connection string.
+
+        """
         parser.add_argument('-u', '--db-user', type=str,
             default=self.defaults['user'],
             help='Database user (defaulting to "%(default)s")',
@@ -54,6 +75,11 @@ class MySqlArgs(object):
         )
 
     def extract(self, args):
+        """
+        Parses the arguments in the namespace returned by
+        :py:meth:`argparse.ArgumentParser.parse_args` to generate the
+        final set of connection arguments.
+        """
         if args.service_conf:
             cp = configparser.ConfigParser()
             with open(args.service_conf, mode='r') as f:
@@ -80,4 +106,9 @@ class MySqlArgs(object):
             }
 
     def connect(self):
+        """
+        Uses the prepared connection arguments and creates a
+        :py:class:`hammers.mysqlshim.MySqlShim` object that connects to
+        the database.
+        """
         return MySqlShim(**self.connect_kwargs)

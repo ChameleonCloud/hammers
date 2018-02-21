@@ -10,12 +10,17 @@ def error_message_factory(subcommand):
 
 
 def error_with_message(subcommand, reason, slack=None):
+    """Raises a :py:exc:`RuntimeError` with `reason`, but if `slack` is not
+    :py:not before sending
+    a message to Slack"""
     if slack:
         slack.post(subcommand, reason, color='xkcd:red')
     raise RuntimeError(reason)
 
 
 def drop_prefix(s, start):
+    """Remove prefix `start` from sting `s`. Raises a :py:exc:`ValueError`
+    if `s` didn't start with `start`."""
     l = len(start)
     if s[:l] != start:
         raise ValueError('string does not start with expected value')
@@ -25,7 +30,8 @@ def drop_prefix(s, start):
 # 3.7+ has https://bugs.python.org/issue10049
 @contextlib.contextmanager
 def nullcontext(*args, **kwargs):
-    "With ``with``, wiff (do nothing)"
+    """With ``with``, wiff (do nothing). `Added to stdlib in 3.7
+    <https://bugs.python.org/issue10049>`_ as :py:func:`contextlib.nullcontext`"""
     yield
 
 

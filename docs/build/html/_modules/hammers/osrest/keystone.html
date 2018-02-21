@@ -1,0 +1,195 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>hammers.osrest.keystone &#8212; Chameleon Cloud Hammers 0.11 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for hammers.osrest.keystone</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Keystone API shims. Requires v3 API. See `Keystone HTTP API</span>
+<span class="sd">&lt;https://developer.openstack.org/api-ref/identity/v3/&gt;`_</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+
+
+<div class="viewcode-block" id="project"><a class="viewcode-back" href="../../../http-api.html#hammers.osrest.keystone.project">[docs]</a><span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Retrieve project by ID&quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">(</span><span class="s1">&#39;identityv3&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/projects/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;X-Auth-Token&#39;</span><span class="p">:</span> <span class="n">auth</span><span class="o">.</span><span class="n">token</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">project</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;project&#39;</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="n">project</span>
+
+
+<div class="viewcode-block" id="projects"><a class="viewcode-back" href="../../../http-api.html#hammers.osrest.keystone.projects">[docs]</a><span class="k">def</span> <span class="nf">projects</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieve multiple projects, optionally filtered by `params`. Keyed by ID.</span>
+
+<span class="sd">    Example params: ``name``, ``enabled``, or stuff from</span>
+<span class="sd">    https://developer.openstack.org/api-ref/identity/v3/?expanded=list-projects-detail#list-projects</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">(</span><span class="s1">&#39;identityv3&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/projects&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;X-Auth-Token&#39;</span><span class="p">:</span> <span class="n">auth</span><span class="o">.</span><span class="n">token</span><span class="p">},</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">projects</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;projects&#39;</span><span class="p">]</span>
+    <span class="n">projects</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]:</span> <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">projects</span><span class="p">}</span></div>
+    <span class="k">return</span> <span class="n">projects</span>
+
+
+<div class="viewcode-block" id="project_lookup"><a class="viewcode-back" href="../../../http-api.html#hammers.osrest.keystone.project_lookup">[docs]</a><span class="k">def</span> <span class="nf">project_lookup</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">name_or_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Tries to find a single project by name or ID. Raises an error if</span>
+<span class="sd">    none or multiple projects found.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">keystone_project</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">name_or_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
+        <span class="k">pass</span> <span class="c1"># failed lookup assuming it was an id, must be a name?</span>
+
+    <span class="n">projects</span> <span class="o">=</span> <span class="n">keystone_projects</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name_or_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">projects</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;no projects found&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">projects</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;multiple projects matched provided name&#39;</span><span class="p">)</span>
+
+    <span class="nb">id</span><span class="p">,</span> <span class="n">project</span> <span class="o">=</span> <span class="n">projects</span><span class="o">.</span><span class="n">popitem</span><span class="p">()</span></div>
+    <span class="k">return</span> <span class="n">project</span>
+
+
+<div class="viewcode-block" id="user"><a class="viewcode-back" href="../../../http-api.html#hammers.osrest.keystone.user">[docs]</a><span class="k">def</span> <span class="nf">user</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Retrieves information about a user by ID&quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">(</span><span class="s1">&#39;identityv3&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/users/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;X-Auth-Token&#39;</span><span class="p">:</span> <span class="n">auth</span><span class="o">.</span><span class="n">token</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;user&#39;</span><span class="p">]</span></div>
+    <span class="k">return</span> <span class="n">user</span>
+
+
+<div class="viewcode-block" id="users"><a class="viewcode-back" href="../../../http-api.html#hammers.osrest.keystone.users">[docs]</a><span class="k">def</span> <span class="nf">users</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">enabled</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Retrieves multiple users, optionally filtered.&quot;&quot;&quot;</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="k">if</span> <span class="n">enabled</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">params</span><span class="p">[</span><span class="s1">&#39;enabled&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">enabled</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="n">url</span><span class="o">=</span><span class="n">auth</span><span class="o">.</span><span class="n">endpoint</span><span class="p">(</span><span class="s1">&#39;identityv3&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/users&#39;</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;X-Auth-Token&#39;</span><span class="p">:</span> <span class="n">auth</span><span class="o">.</span><span class="n">token</span><span class="p">},</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="n">users</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s1">&#39;users&#39;</span><span class="p">]</span>
+    <span class="n">users</span> <span class="o">=</span> <span class="p">{</span><span class="n">u</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]:</span> <span class="n">u</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">users</span><span class="p">}</span></div>
+    <span class="k">return</span> <span class="n">users</span>
+
+
+<div class="viewcode-block" id="user_lookup"><a class="viewcode-back" href="../../../http-api.html#hammers.osrest.keystone.user_lookup">[docs]</a><span class="k">def</span> <span class="nf">user_lookup</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">name_or_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Tries to find a single user by name or ID. Raises an error if none</span>
+<span class="sd">    or multiple users are found.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">keystone_user</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">name_or_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
+        <span class="k">pass</span> <span class="c1"># failed lookup assuming it was an id, must be a name?</span>
+
+    <span class="n">users</span> <span class="o">=</span> <span class="n">keystone_users</span><span class="p">(</span><span class="n">auth</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name_or_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">users</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;no users found&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">users</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;multiple users matched provided name&#39;</span><span class="p">)</span>
+
+    <span class="nb">id</span><span class="p">,</span> <span class="n">user</span> <span class="o">=</span> <span class="n">users</span><span class="o">.</span><span class="n">popitem</span><span class="p">()</span></div>
+    <span class="k">return</span> <span class="n">user</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;keystone_project&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;keystone_projects&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;keystone_project_lookup&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;keystone_user&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;keystone_users&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;keystone_user_lookup&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">keystone_project</span> <span class="o">=</span> <span class="n">project</span>
+<span class="n">keystone_projects</span> <span class="o">=</span> <span class="n">projects</span>
+<span class="n">keystone_project_lookup</span> <span class="o">=</span> <span class="n">project_lookup</span>
+<span class="n">keystone_user</span> <span class="o">=</span> <span class="n">user</span>
+<span class="n">keystone_users</span> <span class="o">=</span> <span class="n">users</span>
+<span class="n">keystone_user_lookup</span> <span class="o">=</span> <span class="n">user_lookup</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Nick Timkovich.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,4 +1,15 @@
 # coding: utf-8
+"""
+Tools to convert credentials into authentication and authorization in raw
+Python, as opposed to the Python APIs provided by ``keystoneauth1`` or the
+like. They were largely created out of frustration with the apparent
+moving target and inconsistencies of the OS client APIs, which was also
+exacerbated by the Blazar client being fairly nacent.
+
+.. admonition:: Compare and contrast
+
+    :py:mod:`ccmanage.auth` which *does* use the Python APIs.
+"""
 from __future__ import print_function, absolute_import, unicode_literals
 
 import datetime
@@ -17,14 +28,17 @@ OS_ENV_PREFIX = 'OS_'
 
 def add_arguments(parser):
     """
-    Inject our args into the user's parser
+    Inject an arg into the user's parser. Intented to pair with
+    :py:meth:`Auth.from_env_or_args`: after argparse parses the
+    args, feed that the args namespace.
     """
     parser.add_argument('--osrc', type=str,
         help='OpenStack parameters file that overrides envvars.')
 
 
 def load_osrc(fn, get_pass=False):
-    '''Load the RC file dumped out by the dashboard as a dict'''
+    '''Parse a Bash RC file dumped out by the dashboard to a dict.
+    Used to load the file specified by :py:func:`add_arguments`.'''
     envval = re.compile(r'''
         \s* # maybe whitespace
         (?P<key>[A-Za-z0-9_\-$]+)  # variable name
@@ -57,7 +71,13 @@ def load_osrc(fn, get_pass=False):
 
 
 class Auth(object):
-    L = logging.getLogger(__name__ + '.Auth')
+    """
+    The Auth object consumes credentials and provides tokens and endpoints.
+    Create either directly by providing a mapping with the keys in
+    ``required_os_vars`` or via the :py:meth:`Auth.from_env_or_args` method.
+    """
+
+    _L = logging.getLogger(__name__ + '.Auth')
 
     required_os_vars = {
         'OS_USERNAME',
@@ -70,14 +90,17 @@ class Auth(object):
     # def from_env_or_args(cls, *, args=None, env=True):
     # <py2 kwargs compat>
     def from_env_or_args(cls, **kwargs):
+        """
+        Loads the RC values from the file in the provided *args* namespace,
+        falling back to the environment vars if *env* is true.
+        :py:func:`add_arguments` is a helper function that will add the "osrc"
+        argument to an argparse parser.
+
+        Returns an Auth object that's ready for use.
+        """
         args = kwargs.get('args', None)
         env = kwargs.get('env', True)
     # </py2 kwargs compat>
-        """
-        Combine the provided *args* (if provided) with the environment vars
-        (if *env*, default true) and produce an Auth object for use by REST
-        functions.
-        """
         os_vars = {}
         if env:
             os_vars = {k: os.environ[k] for k in os.environ if k.startswith(OS_ENV_PREFIX)}
@@ -111,11 +134,14 @@ class Auth(object):
                     self._keystone2_root = link['href']
                     return
             else:
-                raise RuntimeError('could not find self-link among v2 data'.format(data))
+                raise RuntimeError('could not find self-link among v2 data: {}'.format(data))
         else:
             raise RuntimeError('could not find Keystone v2 root')
 
     def authenticate(self):
+        """
+        Authenticate with Keystone to get a token and endpoint listing
+        """
         response = requests.post(self._keystone2_root + '/tokens', json={
         'auth': {
             'passwordCredentials': {
@@ -142,19 +168,28 @@ class Auth(object):
         self._token = self.access['token']['id']
         self.expiry = dateparse(self.access['token']['expires'])
 
-        self.L.debug('New token "{}" expires in {:.2f} minutes'.format(
+        self._L.debug('New token "{}" expires in {:.2f} minutes'.format(
             self._token,
             (self.expiry - datetime.datetime.now(tz=tzutc())).total_seconds() / 60
         ))
 
     @property
     def token(self):
+        """
+        Read-only property that returns an active token, reauthenticating if
+        it has expired. Most services accept this in the HTTP request header
+        under the key ``X-Auth-Token``.
+        """
         if (self.expiry - datetime.datetime.now(tz=tzutc())).total_seconds() < 60:
             self.authenticate()
 
         return self._token
 
     def endpoint(self, type):
+        """
+        Find the endpoint for a given service *type*. Examples include ``compute`` for Nova,
+        ``reservation`` for Blazar, or ``image`` for Glance.
+        """
         services = [
             service
             for service

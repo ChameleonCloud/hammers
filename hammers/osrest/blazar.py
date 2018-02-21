@@ -2,6 +2,7 @@ import requests
 
 
 def host(auth, host_id):
+    """Retrieves host by ID."""
     response = requests.get(
         url=auth.endpoint('reservation') + '/os-hosts/{}'.format(host_id),
         headers={'X-Auth-Token': auth.token}
@@ -12,6 +13,7 @@ def host(auth, host_id):
 
 
 def hosts(auth):
+    """Retrieves all hosts, returning a dictionary keyed by ID."""
     response = requests.get(
         url=auth.endpoint('reservation') + '/os-hosts',
         headers={'X-Auth-Token': auth.token}
@@ -23,6 +25,7 @@ def hosts(auth):
 
 
 def host_update(auth, host_id, values_payload):
+    """Updates host data"""
     response = requests.put(
         url=auth.endpoint('reservation') + '/os-hosts/{}'.format(host_id),
         headers={'X-Auth-Token': auth.token},
@@ -34,6 +37,7 @@ def host_update(auth, host_id, values_payload):
 
 
 def leases(auth):
+    """Retrieves all leases, returning a dictionary keyed by ID"""
     response = requests.get(
         url=auth.endpoint('reservation') + '/leases',
         headers={'X-Auth-Token': auth.token},
@@ -45,6 +49,7 @@ def leases(auth):
 
 
 def lease(auth, lease_id):
+    """Retrieves a lease by ID"""
     response = requests.get(
         url=auth.endpoint('reservation') + '/leases/{}'.format(lease_id),
         headers={'X-Auth-Token': auth.token},
@@ -54,6 +59,7 @@ def lease(auth, lease_id):
 
 
 def lease_delete(auth, lease_id):
+    """Deletes a lease by ID"""
     response = requests.delete(
         url=auth.endpoint('reservation') + '/leases/{}'.format(lease_id),
         headers={'X-Auth-Token': auth.token},

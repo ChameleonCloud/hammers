@@ -9,6 +9,13 @@ __all__ = ['MySqlShim']
 
 
 class MySqlShim(object):
+    """
+    Connection manager and query executor. ``connect_args`` is passed
+    directly to :py:func:`MySQLdb.connect`
+
+    This class provides some quality-of-life stuff like providing column
+    names and emitting dictionaries for rows.
+    """
     batch_size = 100
     limit = 1000
 
@@ -22,21 +29,20 @@ class MySqlShim(object):
         self.version = LIBERTY
 
     def columns(self):
+        """Returns column names from the most recent query."""
         return [cd[0] for cd in self.cursor.description]
 
     def query(self, *cargs, **ckwargs):
         '''
-        Parameters not listed are passed into the :py:func:`cursor.execute`
-        function. One notable one would be ``args`` for parameterized queries.
+        Parameters not listed are passed into the
+        :py:class:`MySQLdb.cursors.Cursor`'s execute function. One that is
+        common would be ``args`` for parameterized queries.
 
-        Keyword Parameters
-        -------------------
-        no_rows : bool
-            Executes the query and returns the number of rows updated.
-
-        immediate : bool
-            If true, immediately runs the query and puts it into a list.
-            Otherwise, an iterator is returned.
+        :param bool no_rows: Executes the query and returns the number of rows
+            updated. Very likely what you want for anything that modifies the
+            database or else you may not complete the transaction.
+        :param bool immediate: If true, immediately runs the query and puts it
+            into a list. Otherwise, an iterator is returned.
         '''
         limit = ckwargs.pop('limit', self.limit)
 

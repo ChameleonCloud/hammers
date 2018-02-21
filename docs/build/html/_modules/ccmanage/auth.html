@@ -1,0 +1,191 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ccmanage.auth &#8212; Chameleon Cloud Hammers 0.11 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for ccmanage.auth</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Generate &quot;real&quot; Keystone auth objects versus the DIY methods like in</span>
+<span class="sd">:py:mod:`hammers.osapi`</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">keystoneauth1</span> <span class="k">as</span> <span class="nn">ksa</span>
+<span class="kn">import</span> <span class="nn">keystoneauth1.loading</span>
+<span class="kn">import</span> <span class="nn">keystoneauth1.session</span>
+
+<span class="kn">from</span> <span class="nn">hammers.osapi</span> <span class="k">import</span> <span class="n">load_osrc</span>
+
+
+<span class="n">OS_ENV_PREFIX</span> <span class="o">=</span> <span class="s1">&#39;OS_&#39;</span>
+
+
+<div class="viewcode-block" id="add_arguments"><a class="viewcode-back" href="../../client-scripts.html#ccmanage.auth.add_arguments">[docs]</a><span class="k">def</span> <span class="nf">add_arguments</span><span class="p">(</span><span class="n">parser</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Inject our args into the user&#39;s :py:class:`~argparse.ArgumentParser`</span>
+<span class="sd">    `parser`. The resulting argument namespace can be inspected by</span>
+<span class="sd">    :py:func:`session_from_args`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--osrc&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span></div>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;OpenStack parameters file that overrides envvars.&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">check_make_equal</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Checks that keys `k1` and `k2` in mutable mapping `m` are equal. If they</span>
+<span class="sd">    differ, a ``ValueError`` is raised. If one is missing, it is set to the</span>
+<span class="sd">    value of the other. If both are missing, nothing happens.</span>
+
+<span class="sd">    No value is returned, `m` is modified in-place.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span> <span class="o">==</span> <span class="n">m</span><span class="p">[</span><span class="n">k2</span><span class="p">]:</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;values differ for keys </span><span class="si">{!r}</span><span class="s1"> and </span><span class="si">{!r}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="c1"># one or both of them isn&#39;t there</span>
+        <span class="k">if</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">m</span><span class="p">:</span>
+            <span class="n">m</span><span class="p">[</span><span class="n">k2</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">m</span><span class="p">:</span>
+            <span class="n">m</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="n">k2</span><span class="p">]</span>
+        <span class="c1">#else:</span>
+            <span class="c1">#both missing.../shrug</span>
+
+
+<div class="viewcode-block" id="auth_from_rc"><a class="viewcode-back" href="../../client-scripts.html#ccmanage.auth.auth_from_rc">[docs]</a><span class="k">def</span> <span class="nf">auth_from_rc</span><span class="p">(</span><span class="n">rc</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a Keystone Auth object from an OS parameter dictionary.  Dict</span>
+<span class="sd">    key format is the same as environment variables (``OS_AUTH_URL``, et al.)</span>
+
+<span class="sd">    We do some dumb gymnastics because everything expects the parameters</span>
+<span class="sd">    in their own cap/delim format:</span>
+
+<span class="sd">    * envvar name:          ``OS_AUTH_URL``</span>
+<span class="sd">    * loader option name:      ``auth-url``</span>
+<span class="sd">    * loader argument name:    ``auth_url``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">OS_ENV_PREFIX</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">rc</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;unknown options without OS_ prefix&#39;</span><span class="p">)</span>
+
+    <span class="n">check_make_equal</span><span class="p">(</span><span class="n">rc</span><span class="p">,</span> <span class="s1">&#39;OS_PROJECT_NAME&#39;</span><span class="p">,</span> <span class="s1">&#39;OS_TENANT_NAME&#39;</span><span class="p">)</span>
+    <span class="n">check_make_equal</span><span class="p">(</span><span class="n">rc</span><span class="p">,</span> <span class="s1">&#39;OS_PROJECT_ID&#39;</span><span class="p">,</span> <span class="s1">&#39;OS_TENANT_ID&#39;</span><span class="p">)</span>
+
+    <span class="n">rc_opt_keymap</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">):</span> <span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">rc</span><span class="p">}</span>
+    <span class="n">loader</span> <span class="o">=</span> <span class="n">ksa</span><span class="o">.</span><span class="n">loading</span><span class="o">.</span><span class="n">get_plugin_loader</span><span class="p">(</span><span class="s1">&#39;password&#39;</span><span class="p">)</span>
+    <span class="n">credentials</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">loader</span><span class="o">.</span><span class="n">get_options</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">opt</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rc_opt_keymap</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">credentials</span><span class="p">[</span><span class="n">opt</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">rc</span><span class="p">[</span><span class="n">rc_opt_keymap</span><span class="p">[</span><span class="n">opt</span><span class="o">.</span><span class="n">name</span><span class="p">]]</span>
+    <span class="n">auth</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_from_options</span><span class="p">(</span><span class="o">**</span><span class="n">credentials</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">auth</span>
+
+
+<div class="viewcode-block" id="session_from_vars"><a class="viewcode-back" href="../../client-scripts.html#ccmanage.auth.session_from_vars">[docs]</a><span class="k">def</span> <span class="nf">session_from_vars</span><span class="p">(</span><span class="n">os_vars</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates a :py:class:`keystoneauth1.session.Session` object from an</span>
+<span class="sd">    OS parameter dictionary akin to :py:func:`auth_from_rc`. This one is</span>
+<span class="sd">    generally more useful as the session object can be used directly with most</span>
+<span class="sd">    clients:</span>
+
+<span class="sd">    &gt;&gt;&gt; from novaclient.client import Client as NovaClient</span>
+<span class="sd">    &gt;&gt;&gt; from ccmanage.auth import session_from_vars</span>
+<span class="sd">    &gt;&gt;&gt; session = session_from_vars({&#39;OS_AUTH_URL&#39;: ...})</span>
+<span class="sd">    &gt;&gt;&gt; nova = NovaClient(&#39;2&#39;, session=session)</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+    <span class="k">return</span> <span class="n">ksa</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">auth</span><span class="o">=</span><span class="n">auth_from_rc</span><span class="p">(</span><span class="n">os_vars</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="session_from_args"><a class="viewcode-back" href="../../client-scripts.html#ccmanage.auth.session_from_args">[docs]</a><span class="k">def</span> <span class="nf">session_from_args</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rc</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Combine the ``osrc`` attribute in the namespace `args` (if provided) with</span>
+<span class="sd">    the environment vars and produce a Keystone session for use by clients.</span>
+
+<span class="sd">    Optionally return the RC dictionary with the OS vars used to construct the</span>
+<span class="sd">    session as the second value in a 2-tuple if `rc` is true.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">os_vars</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">OS_ENV_PREFIX</span><span class="p">)}</span>
+    <span class="k">if</span> <span class="n">args</span> <span class="ow">and</span> <span class="n">args</span><span class="o">.</span><span class="n">osrc</span><span class="p">:</span>
+        <span class="n">os_vars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">load_osrc</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">osrc</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">ksa</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">auth</span><span class="o">=</span><span class="n">auth_from_rc</span><span class="p">(</span><span class="n">os_vars</span><span class="p">))</span>
+    <span class="k">except</span> <span class="n">ksa</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">auth_plugins</span><span class="o">.</span><span class="n">MissingRequiredOptions</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Missing required OS values in env/rcfile (</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="n">rc</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">session</span><span class="p">,</span> <span class="n">os_vars</span>
+    <span class="k">else</span><span class="p">:</span></div>
+        <span class="k">return</span> <span class="n">session</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Nick Timkovich.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

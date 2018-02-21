@@ -1,0 +1,27 @@
+======================
+HTTP Helpers
+======================
+
+Hello there.
+
+
+Auth Management
+================
+
+Tools to convert credentials into authentication and authorization in raw
+Python, as opposed to the Python APIs provided by `keystoneauth1` or the
+like. They were largely created out of frustration with the apparent
+moving target and inconsistencies of the OS client APIs, which was also
+exacerbated by the Blazar client being fairly nacent.
+
+
+.. autofunction:: hammers.osapi.add_arguments
+
+
+.. autofunction:: hammers.osapi.load_osrc
+
+
+.. autoclass:: hammers.osapi.Auth
+    :members: authenticate, endpoint, token
+
+    .. automethod:: from_env_or_args(*, args=None, env=True)

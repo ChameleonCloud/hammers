@@ -1,7 +1,13 @@
+"""
+Keystone API shims. Requires v3 API. See `Keystone HTTP API
+<https://developer.openstack.org/api-ref/identity/v3/>`_
+"""
+
 import requests
 
 
 def project(auth, id):
+    """Retrieve project by ID"""
     response = requests.get(
         url=auth.endpoint('identityv3') + '/projects/{}'.format(id),
         headers={'X-Auth-Token': auth.token},
@@ -13,7 +19,9 @@ def project(auth, id):
 
 def projects(auth, **params):
     """
-    Example params: 'name', 'enabled', or stuff from
+    Retrieve multiple projects, optionally filtered by `params`. Keyed by ID.
+
+    Example params: ``name``, ``enabled``, or stuff from
     https://developer.openstack.org/api-ref/identity/v3/?expanded=list-projects-detail#list-projects
     """
     response = requests.get(
@@ -28,6 +36,8 @@ def projects(auth, **params):
 
 
 def project_lookup(auth, name_or_id):
+    """Tries to find a single project by name or ID. Raises an error if
+    none or multiple projects found."""
     try:
         return keystone_project(auth, name_or_id)
     except requests.HTTPError:
@@ -44,6 +54,7 @@ def project_lookup(auth, name_or_id):
 
 
 def user(auth, id):
+    """Retrieves information about a user by ID"""
     response = requests.get(
         url=auth.endpoint('identityv3') + '/users/{}'.format(id),
         headers={'X-Auth-Token': auth.token},
@@ -54,6 +65,7 @@ def user(auth, id):
 
 
 def users(auth, enabled=None, name=None):
+    """Retrieves multiple users, optionally filtered."""
     params = {}
     if name is not None:
         params['name'] = name
@@ -72,6 +84,8 @@ def users(auth, enabled=None, name=None):
 
 
 def user_lookup(auth, name_or_id):
+    """Tries to find a single user by name or ID. Raises an error if none
+    or multiple users are found."""
     try:
         return keystone_user(auth, name_or_id)
     except requests.HTTPError:

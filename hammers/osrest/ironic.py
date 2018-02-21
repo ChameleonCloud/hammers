@@ -1,3 +1,8 @@
+"""
+Shims for Ironic. See `Ironic HTTP API Docs
+<https://developer.openstack.org/api-ref/baremetal/>`_.
+
+"""
 import requests
 
 
@@ -5,6 +10,7 @@ _API_VERSION = '1.20'
 
 
 def node(auth, node):
+    """Get node by ID or the ``uuid`` key out of a dictionary."""
     if isinstance(node, dict):
         node = node['uuid']
 
@@ -21,6 +27,10 @@ def node(auth, node):
 
 
 def node_set_state(auth, node, state):
+    """Set provision state of `node` to `state`.
+
+    .. seealso:: `Ironic's State Machine <https://docs.openstack.org/ironic/pike/contributor/states.html>`_
+    """
     if isinstance(node, dict):
         node = node['uuid']
 
@@ -39,6 +49,13 @@ def node_set_state(auth, node, state):
 # def ironic_node_update(auth, node, *, add=None, remove=None, replace=None):
 # <python 2 compat>
 def node_update(auth, node, **kwargs):
+    """
+    Add/remove/replace properties on the node.
+
+    :param mapping add:     properties to add
+    :param iterable remove: properties to delete
+    :param mapping replace: properties to replace by key
+    """
     add = kwargs.get('add')
     remove = kwargs.get('remove')
     replace = kwargs.get('replace')
@@ -65,6 +82,7 @@ def node_update(auth, node, **kwargs):
 
 
 def nodes(auth, details=False):
+    """Retrieves all nodes, with more info if `details` is true."""
     path = '/v1/nodes' if not details else '/v1/nodes/detail'
     response = requests.get(
         url=auth.endpoint('baremetal') + path,
@@ -80,6 +98,7 @@ def nodes(auth, details=False):
 
 
 def ports(auth):
+    """Retrieves all Ironic ports, returns a dictionary keyed by the port ID"""
     response = requests.get(
         url=auth.endpoint('baremetal') + '/v1/ports/detail',
         headers={

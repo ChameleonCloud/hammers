@@ -204,6 +204,10 @@ def future_reservations(db):
 
 @query
 def clear_ironic_port_internalinfo(db, port_id):
+    """Remove internal_info data from ports. When the data wasn't cleaned up,
+    it appeared to block other instances from spawning on the node. Now it
+    may not be required? More research needed.
+    """
     sql = '''\
     UPDATE ironic.ports
     SET    internal_info = '{}'
@@ -213,13 +217,14 @@ def clear_ironic_port_internalinfo(db, port_id):
 
 
 def main(argv):
+    """Run queries!"""
     import sys
     import argparse
     import ast
 
     from .mysqlargs import MySqlArgs
 
-    parser = argparse.ArgumentParser(description='Run queries!')
+    parser = argparse.ArgumentParser(description=main.__doc__)
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',

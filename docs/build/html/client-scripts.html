@@ -1,0 +1,171 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Client Tools (“ccmanage”) &#8212; Chameleon Cloud Hammers 0.11 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Miscellany" href="helpers.html" />
+    <link rel="prev" title="Management Scripts (“Hammers”)" href="hammers-scripts.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="client-tools-ccmanage">
+<h1>Client Tools (“ccmanage”)<a class="headerlink" href="#client-tools-ccmanage" title="Permalink to this headline">¶</a></h1>
+<p>These are the collection of modules and scripts used to perform common tasks
+like launching a single node. They generally use the Python APIs, so are
+kept separate in the <code class="xref py py-mod docutils literal notranslate"><span class="pre">ccmanage</span></code> package.</p>
+<p>Because they use the Python APIs, they may be sensitive to the versions
+installed; consult the <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> file for what’s known to work.
+Notably, the Blazar client comes from a repo rather than PyPI so may be a bit
+volatile.</p>
+<div class="section" id="module-ccmanage.auth">
+<span id="authentication"></span><h2>Authentication<a class="headerlink" href="#module-ccmanage.auth" title="Permalink to this headline">¶</a></h2>
+<p>Generate “real” Keystone auth objects versus the DIY methods like in
+<a class="reference internal" href="http-api.html#module-hammers.osapi" title="hammers.osapi"><code class="xref py py-mod docutils literal notranslate"><span class="pre">hammers.osapi</span></code></a></p>
+<dl class="function">
+<dt id="ccmanage.auth.add_arguments">
+<code class="descclassname">ccmanage.auth.</code><code class="descname">add_arguments</code><span class="sig-paren">(</span><em>parser</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ccmanage/auth.html#add_arguments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccmanage.auth.add_arguments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inject our args into the user’s <a class="reference external" href="https://docs.python.org/2/library/argparse.html#argparse.ArgumentParser" title="(in Python v2.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ArgumentParser</span></code></a>
+<cite>parser</cite>. The resulting argument namespace can be inspected by
+<a class="reference internal" href="#ccmanage.auth.session_from_args" title="ccmanage.auth.session_from_args"><code class="xref py py-func docutils literal notranslate"><span class="pre">session_from_args()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ccmanage.auth.auth_from_rc">
+<code class="descclassname">ccmanage.auth.</code><code class="descname">auth_from_rc</code><span class="sig-paren">(</span><em>rc</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ccmanage/auth.html#auth_from_rc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccmanage.auth.auth_from_rc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a Keystone Auth object from an OS parameter dictionary.  Dict
+key format is the same as environment variables (<code class="docutils literal notranslate"><span class="pre">OS_AUTH_URL</span></code>, et al.)</p>
+<p>We do some dumb gymnastics because everything expects the parameters
+in their own cap/delim format:</p>
+<ul class="simple">
+<li>envvar name:          <code class="docutils literal notranslate"><span class="pre">OS_AUTH_URL</span></code></li>
+<li>loader option name:      <code class="docutils literal notranslate"><span class="pre">auth-url</span></code></li>
+<li>loader argument name:    <code class="docutils literal notranslate"><span class="pre">auth_url</span></code></li>
+</ul>
+</dd></dl>
+
+<dl class="function">
+<dt id="ccmanage.auth.session_from_vars">
+<code class="descclassname">ccmanage.auth.</code><code class="descname">session_from_vars</code><span class="sig-paren">(</span><em>os_vars</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ccmanage/auth.html#session_from_vars"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccmanage.auth.session_from_vars" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a <code class="xref py py-class docutils literal notranslate"><span class="pre">keystoneauth1.session.Session</span></code> object from an
+OS parameter dictionary akin to <a class="reference internal" href="#ccmanage.auth.auth_from_rc" title="ccmanage.auth.auth_from_rc"><code class="xref py py-func docutils literal notranslate"><span class="pre">auth_from_rc()</span></code></a>. This one is
+generally more useful as the session object can be used directly with most
+clients:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">novaclient.client</span> <span class="k">import</span> <span class="n">Client</span> <span class="k">as</span> <span class="n">NovaClient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">ccmanage.auth</span> <span class="k">import</span> <span class="n">session_from_vars</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">session</span> <span class="o">=</span> <span class="n">session_from_vars</span><span class="p">({</span><span class="s1">&#39;OS_AUTH_URL&#39;</span><span class="p">:</span> <span class="o">...</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nova</span> <span class="o">=</span> <span class="n">NovaClient</span><span class="p">(</span><span class="s1">&#39;2&#39;</span><span class="p">,</span> <span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="ccmanage.auth.session_from_args">
+<code class="descclassname">ccmanage.auth.</code><code class="descname">session_from_args</code><span class="sig-paren">(</span><em>args=None</em>, <em>rc=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ccmanage/auth.html#session_from_args"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccmanage.auth.session_from_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine the <code class="docutils literal notranslate"><span class="pre">osrc</span></code> attribute in the namespace <cite>args</cite> (if provided) with
+the environment vars and produce a Keystone session for use by clients.</p>
+<p>Optionally return the RC dictionary with the OS vars used to construct the
+session as the second value in a 2-tuple if <cite>rc</cite> is true.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-ccmanage.lease">
+<span id="leases"></span><h2>Leases<a class="headerlink" href="#module-ccmanage.lease" title="Permalink to this headline">¶</a></h2>
+<p>Lease management</p>
+</div>
+<div class="section" id="module-ccmanage.server">
+<span id="servers"></span><h2>Servers<a class="headerlink" href="#module-ccmanage.server" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-ccmanage.quicknode">
+<span id="quick-node"></span><h2>Quick Node<a class="headerlink" href="#module-ccmanage.quicknode" title="Permalink to this headline">¶</a></h2>
+<p>Fire up a single node on Chameleon to do something with.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Client Tools (“ccmanage”)</a><ul>
+<li><a class="reference internal" href="#module-ccmanage.auth">Authentication</a></li>
+<li><a class="reference internal" href="#module-ccmanage.lease">Leases</a></li>
+<li><a class="reference internal" href="#module-ccmanage.server">Servers</a></li>
+<li><a class="reference internal" href="#module-ccmanage.quicknode">Quick Node</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="hammers-scripts.html" title="previous chapter">Management Scripts (“Hammers”)</a></li>
+      <li>Next: <a href="helpers.html" title="next chapter">Miscellany</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/client-scripts.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Nick Timkovich.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/client-scripts.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

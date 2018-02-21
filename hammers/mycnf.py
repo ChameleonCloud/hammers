@@ -37,6 +37,16 @@ MYCNF_PATHS = [
 
 
 class MyCnf(object):
+    """
+    MySQL configuration fetcher. Attempts to emulate the behavior of
+    the MySQL client to the best of its ability, falling through multiple
+    locations where configuration could exist to determine its value.
+
+    .. seealso::
+        * `MySQL 5.7 Reference Manual, 4.2.6 Using Option Files <https://dev.mysql.com/doc/refman/5.7/en/option-files.html>`_
+        * `Configuring MariaDB with my.cnf <https://mariadb.com/kb/en/mariadb/configuring-mariadb-with-mycnf/>`_
+    """
+
     L = logging.getLogger('.'.join([__name__, 'MyCnf']))
 
     def __init__(self, paths=None):

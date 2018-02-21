@@ -1,9 +1,16 @@
+"""
+Glance API shims. See `Glance HTTP API
+<https://developer.openstack.org/api-ref/image/v2/index.html>`_
+"""
+
 import requests
 import textwrap
 
 
 def images(auth, query=None):
     """
+    Retrieves all images, filtered by `query`, if provided.
+
     Doesn't support pagination. Don't request too many.
 
     For querying, accepts a dictionary. If the value is a non-string iterable,
@@ -22,7 +29,9 @@ def images(auth, query=None):
 
 def image(auth, id=None, name=None):
     """
-    Looks up image by id or name. If name is not unique, an error is raised.
+    Looks up image by `id` or `name`. If `name` is not unique given the scope
+    of authentication (e.g. private image owned by someone else may be hidden),
+    an error is raised.
     """
     if id is None and name is None:
         raise ValueError('must specify name or id')
@@ -47,6 +56,9 @@ def image(auth, id=None, name=None):
 # def image_create(auth, name, *, disk_format='qcow2', container_format='bare', visibility='private', extra=None):
 # <py2 kwargs compat>
 def image_create(auth, name, **kwargs):
+    """Creates empty image entry, ready to be filled by an upload command.
+
+    If provided, `extra` is a mapping to set custom properties."""
     disk_format = kwargs.get('disk_format', 'qcow2')
     container_format = kwargs.get('container_format', 'bare')
     visibility = kwargs.get('visibility', 'private')
@@ -75,6 +87,7 @@ def image_create(auth, name, **kwargs):
 
 
 def image_delete(auth, id):
+    """Deletes image by ID"""
     response = requests.delete(
         url=auth.endpoint('image') + '/v2/images/{}'.format(id),
         headers={
@@ -109,11 +122,9 @@ def image_properties(auth, id, **kwargs):
     be modified (name, visibility), some can't (id, checksum), but custom
     fields can be whatever.
 
-    Keyword Parameters
-    ------------------
-    add : mapping
-    remove : iterable
-    replace : mapping
+    :param mapping add:     properties to add
+    :param iterable remove: properties to delete
+    :param mapping replace: properties to replace by key
     """
     add = kwargs.get('add', None)
     remove = kwargs.get('remove', None)
@@ -143,6 +154,9 @@ def image_properties(auth, id, **kwargs):
 
 
 def image_upload_curl(auth, id, filepath):
+    """Generates an cURL command to upload an image file at `filepath` to be
+    associated with the Glance image. Includes authentication header, so
+    is stateless and can be run most anywhere."""
     return textwrap.dedent('''\
     curl -i -X PUT -H "X-Auth-Token: {token}" \
         -H "Content-Type: application/octet-stream" \
@@ -155,6 +169,9 @@ def image_upload_curl(auth, id, filepath):
 
 
 def image_download_curl(auth, id, filepath=None):
+    """Generates a cURL command to download an image file to `filepath`.
+    If `filepath` is not provided, dumps to ``~/<image name>.img``. The
+    request is authenticated, so can be run most anywhere."""
     if filepath is None:
         image = glance_image(auth, id)
         filepath = '~/{}.img'.format(image['name'])

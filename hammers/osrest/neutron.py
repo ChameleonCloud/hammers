@@ -3,6 +3,7 @@ import requests
 
 
 def floatingip_delete(auth, floatingip):
+    """Frees a floating IP by ID"""
     if isinstance(floatingip, collections.Mapping):
         floatingip = floatingip['id']
 
@@ -15,6 +16,7 @@ def floatingip_delete(auth, floatingip):
 
 
 def floatingips(auth):
+    """Get all floating IPs, returns a dictionary keyed by ID."""
     response = requests.get(
         url=auth.endpoint('network') + '/v2.0/floatingips',
         headers={'X-Auth-Token': auth.token},
@@ -25,6 +27,7 @@ def floatingips(auth):
 
 
 def network(auth, net):
+    """Gets a network by ID, or mapping containing an ``'id'`` key."""
     if isinstance(net, collections.Mapping):
         net = net['id']
     response = requests.get(
@@ -36,6 +39,7 @@ def network(auth, net):
 
 
 def networks(auth):
+    """Get all networks. Returns dictionary keyed by ID."""
     response = requests.get(
         url=auth.endpoint('network') + '/v2.0/networks',
         headers={'X-Auth-Token': auth.token},
@@ -46,6 +50,7 @@ def networks(auth):
 
 
 def port_delete(auth, port):
+    """Deletes a port by ID, or mapping containing an ``'id'`` key."""
     if isinstance(port, collections.Mapping):
         port = port['id']
 
@@ -58,6 +63,7 @@ def port_delete(auth, port):
 
 
 def ports(auth):
+    """Get all ports. Returns a dictionary keyed by port ID."""
     response = requests.get(
         url=auth.endpoint('network') + '/v2.0/ports',
         headers={'X-Auth-Token': auth.token},
@@ -68,6 +74,7 @@ def ports(auth):
 
 
 def subnet(auth, subnet):
+    """Get subnet info. Accepts ID or mapping containing an ``'id'`` key."""
     if isinstance(subnet, collections.Mapping):
         subnet = subnet['id']
     response = requests.get(
@@ -79,6 +86,7 @@ def subnet(auth, subnet):
 
 
 def subnets(auth):
+    """Get all subnets."""
     response = requests.get(
         url=auth.endpoint('network') + '/v2.0/subnets',
         headers={'X-Auth-Token': auth.token},
