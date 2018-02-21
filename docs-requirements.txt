@@ -1,0 +1,11 @@
+configparser # backport from 3 to 2, optional 3.5+
+fabric3
+mysqlclient
+Paramiko
+python-dateutil
+-e git+https://github.com/openstack/python-blazarclient#egg=master
+python-glanceclient
+python-keystoneclient
+python-neutronclient
+python-novaclient>=7.1.0,<8.0.0 # still with floating ip management
+requests
