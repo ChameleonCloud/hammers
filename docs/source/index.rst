@@ -8,14 +8,18 @@ Chameleon Cloud Hammers docs
 
   Percussive maintenance
 
+The "hammers" repo is an ad-hoc collection of tools that Nick used to automate
+fixes to the infrastructure, do some investigations for reported problems, and
+make common tasks quicker.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   http-api
-   sql
    hammers-scripts
    client-scripts
+   http-api
+   sql
    helpers
 
 

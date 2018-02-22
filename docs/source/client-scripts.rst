@@ -8,7 +8,7 @@ kept separate in the :py:mod:`ccmanage` package.
 
 Because they use the Python APIs, they may be sensitive to the versions
 installed; consult the ``requirements.txt`` file for what's known to work.
-Notably, the Blazar client comes from a repo rather than PyPI so may be a bit
+Notably, the Blazar client comes from a repo rather than PyPI, so may be a bit
 volatile.
 
 These APIs are also used by `Abracadabra
@@ -83,9 +83,16 @@ Leases
 ========
 
 .. automodule:: ccmanage.lease
+    :members: lease_create_args
 
+    .. autoclass:: Lease(keystone_session, *, sequester=False, _no_clean=False, **lease_kwargs)
+        :members:
+
+    .. autofunction:: lease_create_nodetype(*args, *, node_type, **kwargs)
 
 Servers
 =========
 
 .. automodule:: ccmanage.server
+
+    .. autoclass:: Server(lease, key='default', image='CC-CentOS7', net_ids=None, net_name=None, **extra)
