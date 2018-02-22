@@ -13,6 +13,59 @@ any path shenanigans by providing the full path, e.g.
 ``/root/scripts/hammers/venv/bin/conflict-macs info``, and that is how the
 cronjobs do it.
 
+.. _env_setup:
+
+Setup
+===============
+
+As mentioned in the intro, the scripts are run in a virtualenv. Here's how
+to set it up:
+
+1. Get code
+
+.. code-block:: bash
+
+    mkdir -p /root/scripts/hammers
+    cd /root/scripts/hammers
+    git clone https://github.com/ChameleonCloud/hammers.git
+
+2. Create environment
+
+.. code-block:: bash
+
+    virtualenv /root/scripts/hammers/venv
+    /root/scripts/hammers/venv/bin/pip install -r /root/scripts/hammers/hammers/requirements.txt
+    /root/scripts/hammers/venv/bin/pip install -e /root/scripts/hammers/hammers
+
+.. note::
+
+    Because the hammers repo was installed with ``-e``, updates in the
+    future can be done by ``cd``-ing into the directory and ``git pull``-ing.
+
+3. Set up credentials for OpenStack and Slack
+
+The :ref:`Puppet cronjobs <puppet_jobs>` have a configuration variable that
+points to the OS shell var file, for instance ``/root/adminrc``.
+
+There is also a file for Slack vars, e.g. ``/root/scripts/slack.json``. It
+is a JSON with a root key ``"webhook"`` that is a URL (keep secret!) to post to
+and another root key ``"hostname_name"`` that is a mapping of FQDNs to
+pretty names.
+
+Example:
+
+.. code-block:: json
+
+    {
+        "webhook": "https://hooks.slack.com/services/...super-seekrit...",
+        "hostname_names": {
+            "m01-07.chameleon.tacc.utexas.edu": "CHI@TACC",
+            "m01-03.chameleon.tacc.utexas.edu": "KVM@TACC",
+            "admin01.uc.chameleoncloud.org": "CHI@UC"
+        }
+    }
+
+
 Script Descriptions
 =======================
 
@@ -122,52 +175,6 @@ Common Options
 * ``--slack <json-options>`` - if provided, used to post notifications to Slack
 * ``--osrc <rc-file>`` - alternate way to feed in the OS authentication vars
 
-.. _env_setup:
-
-Setup
-===============
-
-As mentioned in the intro, the scripts are run in a virtualenv. Here's how
-to set it up:
-
-1. Get code
-
-.. code-block:: bash
-
-    mkdir -p /root/scripts/hammers
-    cd /root/scripts/hammers
-    git clone https://github.com/ChameleonCloud/hammers.git
-
-2. Create environment
-
-.. code-block:: bash
-
-    virtualenv /root/scripts/hammers/venv
-    /root/scripts/hammers/venv/bin/pip install -r /root/scripts/hammers/hammers/requirements.txt
-    /root/scripts/hammers/venv/bin/pip install -e /root/scripts/hammers/hammers
-
-3. Set up credentials for OpenStack and Slack
-
-The :ref:`Puppet cronjobs <puppet_jobs>` have a configuration variable that
-points to the OS shell var file, for instance ``/root/adminrc``.
-
-There is also a file for Slack vars, e.g. ``/root/scripts/slack.json``. It
-is a JSON with a root key ``"webhook"`` that is a URL (keep secret!) to post to
-and another root key ``"hostname_name"`` that is a mapping of FQDNs to
-pretty names.
-
-Example:
-
-.. code-block:: json
-
-    {
-        "webhook": "https://hooks.slack.com/services/...super-seekrit...",
-        "hostname_names": {
-            "m01-07.chameleon.tacc.utexas.edu": "CHI@TACC",
-            "m01-03.chameleon.tacc.utexas.edu": "KVM@TACC",
-            "admin01.uc.chameleoncloud.org": "CHI@UC"
-        }
-    }
 
 .. _puppet_jobs:
 

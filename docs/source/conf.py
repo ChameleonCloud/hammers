@@ -83,7 +83,11 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'logo': '480px-Claw-hammer.jpg',
+    'github_user': 'ChameleonCloud',
+    'github_repo': 'hammers',
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -98,13 +102,20 @@ html_static_path = ['_static']
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-# html_sidebars = {}
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+    ],
+}
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'ChameleonCloudHammersdoc'
+htmlhelp_basename = 'ChameleonCloudHammersDoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------

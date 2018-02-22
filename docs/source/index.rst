@@ -3,8 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Chameleon Cloud Hammers' documentation!
-===================================================
+Chameleon Cloud Hammers docs
+==============================
+
+  Percussive maintenance
 
 .. toctree::
    :maxdepth: 2
