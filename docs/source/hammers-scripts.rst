@@ -169,6 +169,12 @@ Curiouser
 Displays Ironic nodes that are in an error state, but not in maintenance.
 
 
+Metadata Sync
+---------------
+
+.. automodule:: hammers.scripts.metadata_sync
+
+
 Common Options
 =================
 

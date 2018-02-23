@@ -33,4 +33,4 @@ Queries
     :members: query, project_col, idle_projects, latest_instance_interaction,
               owned_ips, owned_ip_single, projects_with_unowned_ports,
               owned_ports_single, future_reservations,
-              clear_ironic_port_internalinfo, main
+              clear_ironic_port_internalinfo, remove_extra_capability, main

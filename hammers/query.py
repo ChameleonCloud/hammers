@@ -216,6 +216,20 @@ def clear_ironic_port_internalinfo(db, port_id):
     return db.query(sql, args=[port_id], no_rows=True)
 
 
+@query
+def remove_extra_capability(db, host_id, capability_name):
+    """
+    Remove an extra capability by name from `host_id`. (HTTP API doesn't
+    support this as of Feb 2018)
+    """
+    sql = '''\
+    DELETE FROM blazar.computehost_extra_capabilities
+    WHERE computehost_id = %s
+      AND capability_name = %s
+    '''
+    return db.query(sql, args=[host_id, capability_name], no_rows=True)
+
+
 def main(argv):
     """Run queries!"""
     import sys
