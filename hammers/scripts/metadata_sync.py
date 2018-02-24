@@ -257,6 +257,7 @@ def main(argv):
                 if modified != 1:
                     raise RuntimeError('delete query removed {} rows, expected 1'.format(modified))
 
+        db.db.commit()
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

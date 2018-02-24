@@ -230,6 +230,17 @@ def remove_extra_capability(db, host_id, capability_name):
     return db.query(sql, args=[host_id, capability_name], no_rows=True)
 
 
+@query
+def remove_extra_capability_sentinel(db, sentinel):
+    """Remove all extra capabilities with value `sentinel`. The HTTP
+    API could be used to mark them."""
+    sql = '''\
+    DELETE FROM blazar.computehost_extra_capabilities
+    WHERE capability_name = %s
+    '''
+    return db.query(sql, args=[sentinel], no_rows=True)
+
+
 def main(argv):
     """Run queries!"""
     import sys
