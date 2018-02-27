@@ -24,8 +24,8 @@ SUBCOMMAND = 'ipmi-retry'
 ERROR_MATCHERS = [re.compile(r) for r in [
     r'^Failed to tear down\. Error: Failed to set node power state to power off\.',
     r'^Failed to tear down\. Error: IPMI call failed: power status\.',
-    # below is when node is in maintenance, which we're avoiding...
-    # r"^During sync_power_state, max retries exceeded for node [0-9a-f\-]+, node state power (on|off) does not match expected state 'power (on|off)'\.",
+    r'(?s)^Failed to tear down. Error: Unable to clear binding profile for neutron port [0-9a-f-]+\. Error:.+?502 Proxy Error',
+    r"^During sync_power_state, max retries exceeded for node [0-9a-f-]+, node state (None|power (on|off)) does not match expected state 'power (on|off)'\.",
 ]]
 
 _thats_crazy = error_message_factory(SUBCOMMAND)
