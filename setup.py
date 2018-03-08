@@ -27,7 +27,7 @@ setup(
             'dirty-ports = hammers.scripts.dirty_ports:main',
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
-            'retry-ipmi = hammers.scripts.ipmi_retry:main',
+            'ironic-error-resetter = hammers.scripts.ironic_error_resetter:main',
             'undead-instances = hammers.scripts.undead_instances:main',
         ],
     },

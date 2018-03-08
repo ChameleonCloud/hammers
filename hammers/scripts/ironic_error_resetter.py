@@ -19,7 +19,7 @@ from hammers.slack import Slackbot
 from hammers.util import error_message_factory
 
 OS_ENV_PREFIX = 'OS_'
-SUBCOMMAND = 'ipmi-retry'
+SUBCOMMAND = 'ironic-error-resetter'
 
 ERROR_MATCHERS = [re.compile(r) for r in [
     r'^Failed to tear down\. Error: Failed to set node power state to power off\.',
@@ -122,7 +122,7 @@ class NodeEventTracker(object):
 
 class NodeResetter(object):
     max_attempts = 3
-    extra_key = 'hammer_resets_ipmi'
+    extra_key = 'hammer_error_resets'
 
     def __init__(self, auth, node_id, dry_run=False):
         self.auth = auth
