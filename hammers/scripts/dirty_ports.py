@@ -1,4 +1,16 @@
 # coding: utf-8
+'''
+Basic Usage:
+
+.. code-block:: bash
+
+    dirty-ports {info, clean}
+
+There was/is an issue where a non-empty value in an Ironic node's port's
+``internal_info`` field would cause a new instance to fail deployment on the
+node. This notifies (``info``) or ``clean``\ s up if there is info on said
+ports on nodes that are in the "available" state.
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import sys

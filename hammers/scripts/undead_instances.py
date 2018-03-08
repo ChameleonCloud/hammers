@@ -1,4 +1,15 @@
 # coding: utf-8
+'''
+Sometimes Nova doesn't seem to tell Ironic the instance went away on a node,
+then the next time it deploys to the same node, Ironic fails.
+
+.. code-block:: bash
+
+    undead-instances {info, delete}
+
+Running with ``info`` displays what it thinks is wrong, and with ``delete``
+will clear the offending state from the nodes.
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import sys

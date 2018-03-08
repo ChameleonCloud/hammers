@@ -1,4 +1,26 @@
 # coding: utf-8
+'''
+Basic Usage:
+
+.. code-block:: bash
+
+    ironic-error-resetter {info, reset}
+
+Resets Ironic nodes in error state with a known, common error. Started out
+looking for IPMI-related errors, but isn't intrinsically specific to them
+over any other error that shows up on the nodes. Records the resets it
+performs on the node metadata (``extra`` field) and refuses after some number
+(currently 3) of accumulated resets.
+
+Currently watches out for:
+
+.. code-block:: text
+
+    ^Failed to tear down\. Error: Failed to set node power state to power off\.
+    ^Failed to tear down\. Error: IPMI call failed: power status\.
+    (?s)^Failed to tear down. Error: Unable to clear binding profile for neutron port [0-9a-f-]+\. Error:.+?502 Proxy Error
+    ^During sync_power_state, max retries exceeded for node [0-9a-f-]+, node state (None|power (on|off)) does not match expected state 'power (on|off)'\.
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import argparse

@@ -6,6 +6,7 @@ These are the collection of scripts used to fix inconsistencies in the
 various OpenStack services. Not particularly bright tools, but good for
 a first-pass.
 
+
 The tools are run in a Python virtualenv to avoid package clashes with the
 system Python. On the CHI\@TACC and CHI\@UC controllers, they live at
 ``/root/scripts/hammers/venv``. The scripts can be called directly without
@@ -39,8 +40,10 @@ to set it up:
 
 .. note::
 
-    Because the hammers repo was installed with ``-e``, updates in the
+    Because the hammers repo was installed with ``-e``, some updates in the
     future can be done by ``cd``-ing into the directory and ``git pull``-ing.
+    Updates that change script entrypoints in ``setup.py`` will require a
+    quick ``pip install...``
 
 3. Set up credentials for OpenStack and Slack
 
@@ -65,6 +68,18 @@ Example:
         }
     }
 
+Running
+=============
+
+You can either ``source venv/bin/activate`` the virtualenv to put the scripts
+into the path, or directly execute them out of the directory,
+``venv/bin/neutron-reaper``
+
+Common Options:
+
+* ``--slack <json-options>`` - if provided, used to post notifications to Slack
+* ``--osrc <rc-file>`` - alternate way to feed in the OS authentication vars
+
 
 Script Descriptions
 =======================
@@ -72,114 +87,37 @@ Script Descriptions
 Neutron Resource "Reaper"
 ------------------------------
 
-.. code-block:: bash
-
-    neutron-reaper {info, delete} \
-                   {ip, port} \
-                   <grace-days> \
-                   [ --dbversion ocata ]
-
-Reclaims idle floating IPs and cleans up stale ports.
-
-Required arguments, in order:
-
-* ``info`` to just display what would be cleaned up, or actually clean it up with ``delete``.
-* Consider floating ``ip``'s or ``port``'s
-* A project needs to be idle for ``grace-days`` days.
-
-Optional arguments:
-
-* ``--dbversion ocata`` needed for the Ocata release as the database schema
-  changed slightly.
-
+.. automodule:: hammers.scripts.neutron_reaper
 
 Conflicting Ironic/Neutron MACs
 -----------------------------------
 
 .. automodule:: hammers.scripts.conflict_macs
 
-.. code-block:: bash
-
-    conflict-macs \
-        {info, delete} \
-        ( --ignore-from-ironic-config <path to ironic.conf> |
-          --ignore-subnet <subnet UUID> )
-
-The Ironic subnet must be provided---directly via ID or determined from a
-config---otherwise the script would think that they are in conflict.
-
 Undead Instances
 -----------------------
 
-Sometimes Nova doesn't seem to tell Ironic the instance went away on a node,
-then the next time it deploys to the same node, Ironic fails.
+.. automodule:: hammers.scripts.undead_instances
 
-.. code-block:: bash
-
-    undead-instances {info, delete}
-
-Running with ``info`` displays what it thinks is wrong, and with ``delete``
-will clear the offending state from the nodes.
-
-IPMI Error Cleanup Retry
+Ironic Node Error Resetter
 ------------------------------
 
-.. code-block:: bash
-
-    retry-ipmi {info, reset}
-
-Resets Ironic nodes in error state with a known, common error. Started out
-looking for IPMI-related errors, but isn't intrinsically specific to them
-over any other error that shows up on the nodes. Records the resets it
-performs on the node metadata (``extra`` field) and refuses after some number
-(currently 3) of accumulated resets.
-
-Currently watches out for:
-
-.. code-block:: text
-
-    ^Failed to tear down\. Error: Failed to set node power state to power off\.
-    ^Failed to tear down\. Error: IPMI call failed: power status\.
-
+.. automodule:: hammers.scripts.ironic_error_resetter
 
 Dirty Ports
 -------------
 
-.. code-block:: bash
-
-    dirty-ports {info, clean}
-
-There was/is an issue where a non-empty value in an Ironic node's port's
-``internal_info`` field would cause a new instance to fail deployment on the
-node. This notifies (``info``) or ``clean``\ s up if there is info on said
-ports on nodes that are in the "available" state.
-
+.. automodule:: hammers.scripts.dirty_ports
 
 Curiouser
 --------------
 
-.. note::
-
-    Not well-tested, may be slightly buggy with Chameleon phase 2 updates.
-
-.. code-block:: bash
-
-    curiouser
-
-Displays Ironic nodes that are in an error state, but not in maintenance.
-
+.. automodule:: hammers.scripts.curiouser
 
 Metadata Sync
 ---------------
 
 .. automodule:: hammers.scripts.metadata_sync
-
-
-Common Options
-=================
-
-* ``--slack <json-options>`` - if provided, used to post notifications to Slack
-* ``--osrc <rc-file>`` - alternate way to feed in the OS authentication vars
 
 
 .. _puppet_jobs:

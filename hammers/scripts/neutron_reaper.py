@@ -1,4 +1,25 @@
 # coding: utf-8
+'''
+.. code-block:: bash
+
+    neutron-reaper {info, delete} \
+                   {ip, port} \
+                   <grace-days> \
+                   [ --dbversion ocata ]
+
+Reclaims idle floating IPs and cleans up stale ports.
+
+Required arguments, in order:
+
+* ``info`` to just display what would be cleaned up, or actually clean it up with ``delete``.
+* Consider floating ``ip``'s or ``port``'s
+* A project needs to be idle for ``grace-days`` days.
+
+Optional arguments:
+
+* ``--dbversion ocata`` needed for the Ocata release as the database schema
+  changed slightly.
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import sys

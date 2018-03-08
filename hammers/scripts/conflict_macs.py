@@ -1,4 +1,15 @@
 # coding: utf-8
+'''
+.. code-block:: bash
+
+    conflict-macs \
+        {info, delete} \
+        ( --ignore-from-ironic-config <path to ironic.conf> |
+          --ignore-subnet <subnet UUID> )
+
+The Ironic subnet must be provided---directly via ID or determined from a
+config---otherwise the script would think that they are in conflict.
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import argparse

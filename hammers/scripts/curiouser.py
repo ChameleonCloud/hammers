@@ -1,4 +1,16 @@
 # coding: utf-8
+'''
+.. note::
+
+    Not well-tested, may be slightly buggy with Chameleon phase 2 updates.
+
+.. code-block:: bash
+
+    curiouser
+
+Displays Ironic nodes that are in an error state, but not in maintenance.
+The Ironic Error Resetter can fix some error states automatically.
+'''
 from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
@@ -74,7 +86,7 @@ def main(argv=None):
         in errored_nodes
     )
     message = '\n'.join(message)
-    
+
     print(message.replace('•', '*'))
     if slack:
         slack.post(SUBCOMMAND, message, color='xkcd:red')
