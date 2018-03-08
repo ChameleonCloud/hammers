@@ -114,6 +114,7 @@ class Auth(object):
         if missing_vars:
             raise RuntimeError('Missing required OS values: {}'.format(missing_vars))
         self._find_keystone2_root()
+        self.region = self.rc.get('OS_REGION', None)
         self.authenticate()
 
     def _find_keystone2_root(self):
@@ -200,7 +201,18 @@ class Auth(object):
             raise RuntimeError("didn't find any services matching type '{}'".format(type))
         elif len(services) > 1:
             raise RuntimeError("found multiple services matching type '{}'".format(type))
-
         service = services[0]
+        endpoints = service['endpoints']
 
-        return service['endpoints'][0]['publicURL']
+        if self.region:
+            for endpoint in endpoints:
+                if endpoint['region'] == self.region:
+                    # leak endpoint out of the loop
+                    break
+            else:
+                raise RuntimeError("didn't find any endpoints for region '{}'".format(self.region))
+        else:
+            # pick arbitrary region if none provided.
+            endpoint = endpoints[0]
+
+        return endpoint['publicURL']
