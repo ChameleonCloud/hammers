@@ -39,21 +39,26 @@ installed like the hammers scripts.
 
     optional arguments:
     -h, --help            show this help message and exit
-    --osrc OSRC           OpenStack parameters file that overrides envvars
+    --osrc OSRC           OpenStack parameters file that overrides envvars.
                             (default: None)
     --node-type NODE_TYPE
-    --key-name KEY_NAME   SSH keypair name on OS used to create an instance
-                            (default: default)
-    --image IMAGE         Name or ID of image to launch.
-                            (default: CC-CentOS7)
+                            Node type to launch. May be custom or likely one of:
+                            'compute_skylake', 'gpu_p100',
+                            'gpu_p100_nvlinkgpu_k80', 'gpu_m40',
+                            'compute_haswell_ib', 'storage', 'atom',
+                            'compute_haswell', 'storage_hierarchy', 'arm64',
+                            'fpga', 'lowpower_xeon' (default: compute_haswell)
+    --key-name KEY_NAME   SSH keypair name on OS used to create an instance.
+                            Must exist in Nova (default: default)
+    --image IMAGE         Name or ID of image to launch. (default: CC-CentOS7)
     --no-clean            Do not clean up on failure. (default: False)
-    --net-name NET_NAME   Name of network to connect to.
-                            (default: sharednet1)
+    --net-name NET_NAME   Name of network to connect to. (default: sharednet1)
     --no-floatingip       Skip assigning a floating IP. (default: False)
 
 It can either read the environment variables (i.e. you did a ``source
 osvars.rc``) or be given a file with them---including the password---in
-it (``--osrc``). A basic run:
+it (``--osrc``). There must be a key pair loaded into Nova that matches
+the option for ``--key-name``. A basic run:
 
 .. code-block:: bash
 
