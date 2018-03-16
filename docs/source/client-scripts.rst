@@ -44,7 +44,7 @@ installed like the hammers scripts.
     --node-type NODE_TYPE
                             Node type to launch. May be custom or likely one of:
                             'compute_skylake', 'gpu_p100',
-                            'gpu_p100_nvlinkgpu_k80', 'gpu_m40',
+                            'gpu_p100_nvlink', 'gpu_k80', 'gpu_m40',
                             'compute_haswell_ib', 'storage', 'atom',
                             'compute_haswell', 'storage_hierarchy', 'arm64',
                             'fpga', 'lowpower_xeon' (default: compute_haswell)
