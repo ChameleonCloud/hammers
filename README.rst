@@ -24,9 +24,9 @@ Collection of various tools to keep things ship-shape. Not particularly bright t
 
   Nova instances that have been put to rest but still cling to Ironic nodes, preventing the next generation from being...ensouled? Checks for the inconsistency and fixed it.
 
-4. Retry cleaning up after IPMI errors
+4. Clean up after IPMI errors
 
-  ``retry-ipmi {info, reset}``
+  ``ironic-error-resetter {info, reset}``
 
   Resets Ironic nodes in error state with a known, common error. Records those resets on the node metadata (``extra`` field) and refuses after a magic number of attempts.
 
@@ -83,8 +83,8 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
     hour => 5,
     minute => 20,
   }
-  cron { 'hammers-retryipmi':
-    command => "$venv_bin/retry-ipmi info --slack $slack_json_loc --osrc $osrc_loc 2>&1 | /usr/bin/logger -t hammers-retryipmi",
+  cron { 'hammers-ironicerrorresetter':
+    command => "$venv_bin/ironic-error-resetter info --slack $slack_json_loc --osrc $osrc_loc 2>&1 | /usr/bin/logger -t hammers-ironicerrorresetter",
     user => 'root',
     hour => 5,
     minute => 25,
