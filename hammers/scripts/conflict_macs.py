@@ -206,7 +206,7 @@ def delete(auth, conflict_macs, verbose=False, safe=True, slack=None):
     if safe:
         # sanity check, make sure we don't go crazy
         if len(conflict_macs) > 10:
-            raise RuntimeError('(in)sanity check: thinks there are {} conflicting MACs')
+            raise RuntimeError('(in)sanity check: thinks there are {} conflicting MACs'.format(len(conflict_macs)))
 
     if slack:
         if conflict_macs:
