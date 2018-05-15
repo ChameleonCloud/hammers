@@ -7,4 +7,4 @@ from .mysqlargs import *
 
 from . import query
 
-__version__ = '0.1.10'
+__version__ = '0.1.11'
