@@ -30,6 +30,12 @@ Collection of various tools to keep things ship-shape. Not particularly bright t
 
   Resets Ironic nodes in error state with a known, common error. Records those resets on the node metadata (``extra`` field) and refuses after a magic number of attempts.
 
+5. Update orphaned resource providers
+
+  ``orphan-resource-providers {info, update}``
+
+  Detects and updates resource providers whose UUID has not been updated to match a recreated Nova compute node.
+
 Common options:
 
 * ``--slack <json-options>`` - if provided, used to post notifications to Slack
@@ -100,4 +106,10 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
     user => 'root',
     hour => 5,
     minute => 35,
+  }
+  cron { 'hammers-orphanresourceproviders':
+    command => "$venv_bin/orphan-resource-providers info --slack $slack_json_loc 2>&1 | /usr/bin/logger -t hammers-orphanresourceproviders",
+    user => 'root',
+    hour => 5,
+    minute => 40,
   }

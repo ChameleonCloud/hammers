@@ -109,6 +109,11 @@ Dirty Ports
 
 .. automodule:: hammers.scripts.dirty_ports
 
+Orphan Resource Providers
+-------------------------
+
+.. automodule:: hammers.scripts.orphan_resource_providers
+
 Curiouser
 --------------
 
@@ -157,4 +162,10 @@ is already done.
         user => 'root',
         hour => 5,
         minute => 35,
+    }
+    cron { 'hammers-orphanresourceproviders':
+      command => "$venv_bin/orphan-resource-providers info --slack $slack_json_loc 2>&1 | /usr/bin/logger -t hammers-orphanresourceproviders",
+      user => 'root',
+      hour => 5,
+      minute => 40,
     }

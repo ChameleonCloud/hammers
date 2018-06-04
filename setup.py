@@ -28,6 +28,7 @@ setup(
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
             'ironic-error-resetter = hammers.scripts.ironic_error_resetter:main',
+            'orphan-resource-providers = hammers.scripts.orphan_resource_providers:main',
             'undead-instances = hammers.scripts.undead_instances:main',
         ],
     },

@@ -241,6 +241,32 @@ def remove_extra_capability_sentinel(db, sentinel):
     return db.query(sql, args=[sentinel], no_rows=True)
 
 
+@query
+def count_orphan_resource_providers(db):
+    """Count all orphan resource providers in the nova_api database."""
+    sql = '''\
+    SELECT COUNT(*)
+    FROM   nova_api.resource_providers rp JOIN nova.compute_nodes cn
+    ON     cn.hypervisor_hostname = rp.name
+    WHERE  cn.deleted = 0
+       AND rp.uuid != cn.uuid
+    '''
+    return db.query(sql)
+
+
+@query
+def update_orphan_resource_providers(db):
+    """Update all orphan resource providers in the nova_api database."""
+    sql = '''\
+    UPDATE nova_api.resource_providers rp JOIN nova.compute_nodes cn
+        ON cn.hypervisor_hostname = rp.name
+       SET rp.uuid = cn.uuid
+     WHERE cn.deleted = 0
+       AND rp.uuid != cn.uuid
+    '''
+    return db.query(sql, no_rows=True)
+
+
 def main(argv):
     """Run queries!"""
     import sys
