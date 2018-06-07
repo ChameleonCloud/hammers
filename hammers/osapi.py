@@ -114,7 +114,7 @@ class Auth(object):
         if missing_vars:
             raise RuntimeError('Missing required OS values: {}'.format(missing_vars))
         self._find_keystone2_root()
-        self.region = self.rc.get('OS_REGION', None)
+        self.region = self.rc.get('OS_REGION_NAME', None)
         self.authenticate()
 
     def _find_keystone2_root(self):
