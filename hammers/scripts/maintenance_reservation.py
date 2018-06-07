@@ -47,7 +47,7 @@ def main():
     # Open Keystone Authenticated Session
     auth = v2.Password.load_from_argparse_arguments(args)
     sess = session.Session(auth=auth)
-    keystone = client.Client(session=sess)
+    keystone = client.Client(session=sess, region_name=os.environ.get('OS_REGION_NAME'))
 
     token = sess.get_token()
 
