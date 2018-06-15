@@ -37,8 +37,8 @@ from hammers.slack import Slackbot
 OS_ENV_PREFIX = 'OS_'
 
 RESOURCE_QUERY = {
-    'ip': query.owned_ip_single,
-    'port': query.owned_ports_single,
+    'ip': query.owned_compute_ip_single,
+    'port': query.owned_compute_port_single,
 }
 
 RESOURCE_DELETE_COMMAND = {
@@ -49,32 +49,36 @@ RESOURCE_DELETE_COMMAND = {
 assert set(RESOURCE_QUERY) == set(RESOURCE_DELETE_COMMAND)
 
 
-def normalize_project_name(s):
-    return s.lower().replace('-', '').strip()
+def normalize_project_name(s, kvm=False):
+    if kvm:
+        return s
+    else:
+        return s.lower().replace('-', '').strip()
 
 
 def days_past(dt):
+    if isinstance(dt, str):
+        dt = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
     return (datetime.datetime.utcnow() - dt).total_seconds() / (60*60*24)
 
 
-def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
-    try:
+def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, quiet=False):
+    future_projects = set()
+    db_names = ['nova']
+    if not kvm:
         future_projects = {
             normalize_project_name(row['project_id'])
             for row
             in query.future_reservations(db)
         }
-    except ProgrammingError as e:
-        if "Table 'blazar.leases' doesn't exist" in str(e):
-            # assume we're on KVM, we can't check this.
-            future_projects = set()
-        else:
-            raise
+        db_names.append('nova_cell0')
 
     project_last_seen = {}
-    for db_name in ['nova', 'nova_cell0']:
-        for row in query.latest_instance_interaction(db, db_name):
-            proj_id = normalize_project_name(row['id'])
+    for db_name in db_names:
+        for row in query.latest_instance_interaction(db, kvm, db_name):
+            # Projects that have active instances are not considered as idled projects
+            if row['active']: continue
+            proj_id = normalize_project_name(row['id'], kvm)
             if (proj_id in whitelist
                     or row['name'] in whitelist
                     or proj_id in future_projects):
@@ -158,6 +162,7 @@ def main(argv=None):
     parser.add_argument('-d', '--dbversion', type=str,
         help='Version of the database. Schemas differ, pick the appropriate one.',
         choices=[query.LIBERTY, query.OCATA], default=query.LIBERTY)
+    parser.add_argument('--kvm', help='Run at KVM site', action='store_true')
 
     parser.add_argument('action', choices=['info', 'delete'],
         help='Just display info or actually delete them?')
@@ -184,7 +189,7 @@ def main(argv=None):
     whitelist = set()
     if args.whitelist:
         with open(args.whitelist) as f:
-            whitelist = {normalize_project_name(line) for line in f}
+            whitelist = {normalize_project_name(line, args.kvm) for line in f}
 
     db = mysqlargs.connect()
     db.version = args.dbversion
@@ -195,6 +200,7 @@ def main(argv=None):
         'type_': args.type,
         'idle_days': args.idle_days,
         'whitelist': whitelist,
+        'kvm': args.kvm,
         'describe': args.action == 'info',
         'quiet': args.quiet,
     }

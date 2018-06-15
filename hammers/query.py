@@ -104,7 +104,7 @@ _LATEST_INSTANCE_DATABASES = {
 }
 
 @query
-def latest_instance_interaction(db, nova_db_name='nova'):
+def latest_instance_interaction(db, kvm, nova_db_name='nova'):
     '''
     Get the latest interaction date with instances on the target database name.
     Combine as you so desire.
@@ -112,19 +112,26 @@ def latest_instance_interaction(db, nova_db_name='nova'):
     if nova_db_name not in _LATEST_INSTANCE_DATABASES:
         # can't parameterize a database name
         raise RuntimeError('invalid database selection')
-
+    if kvm:
+        table = '{nova_db_name}.instances'.format(nova_db_name=nova_db_name)
+        first_col = 'project_id'
+        second_col = 'project_id'
+    else:
+        table = '{nova_db_name}.instances AS inst INNER JOIN keystone.project AS proj ON inst.project_id = proj.id'.format(nova_db_name=nova_db_name)
+        first_col = 'proj.name'
+        second_col = 'proj.id'
+        
     sql = '''\
     SELECT
-        proj.name,
-        proj.id,
+        {first_col} AS name,
+        {second_col} AS id,
         MAX(IFNULL(deleted_at,
-                IFNULL(updated_at, created_at))) AS latest_interaction
+            IFNULL(updated_at, created_at))) AS latest_interaction,
+        MAX(deleted_at is NULL) > 0 AS active
     FROM
-        {nova_db_name}.instances AS inst
-            INNER JOIN
-        keystone.project AS proj ON inst.project_id = proj.id
+        {table}
     GROUP BY project_id;
-    '''.format(nova_db_name=nova_db_name)
+    '''.format(first_col=first_col, second_col=second_col,table=table)
     return db.query(sql, limit=None)
 
 
@@ -148,16 +155,21 @@ def owned_ips(db, project_ids):
 
 
 @query
-def owned_ip_single(db, project_id):
+def owned_compute_ip_single(db, project_id):
     '''
-    Return all IPs associated with *project_id*
+    Return all IPs associated with *project_id* and if associated with a port, whose fixed port is owned by compute
     '''
     sql = '''
-    SELECT id
-         , status
-         , {projcol} AS project_id
-    FROM   neutron.floatingips
-    WHERE  {projcol} = %s;
+    SELECT f.id
+         , f.status
+         , f.{projcol} AS project_id
+    FROM   neutron.floatingips AS f
+    LEFT JOIN  neutron.ports AS p
+    ON f.fixed_port_id = p.id
+    WHERE  
+         f.{projcol} = %s
+         AND
+         ( p.device_owner LIKE 'compute%%' OR p.id is NULL );
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_id], limit=None)
 
@@ -175,13 +187,19 @@ def projects_with_unowned_ports(db, version='liberty'):
 
 
 @query
-def owned_ports_single(db, project_id):
+def owned_compute_port_single(db, project_id):
+    '''
+    Return all ports associated with *project_id* and is owned by compute
+    '''
     sql = '''
     SELECT id
          , status
          , {projcol} AS project_id
     FROM   neutron.ports
-    WHERE  {projcol} = %s;
+    WHERE  
+         {projcol} = %s
+         AND
+         device_owner LIKE 'compute%%';
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_id], limit=None)
 
