@@ -35,9 +35,9 @@ def ports_by_node(ports, assert_single=False):
     node_ports.default_factory = None
 
     if assert_single:
-        for node_id, nodes in node_ports.items():
-            if len(nodes) != 1:
-                raise ValueError('node {} has more than one node.'.format(node_id))
+        for node_id, ports in node_ports.items():
+            if len(ports) != 1:
+                raise ValueError('node {} has more than one port.'.format(node_id))
 
     return node_ports
 
