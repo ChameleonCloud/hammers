@@ -3,7 +3,7 @@ fabric3
 mysqlclient
 Paramiko
 python-dateutil
--e git+https://github.com/openstack/python-blazarclient#egg=master
+python-blazarclient>=1.1.1
 python-glanceclient
 python-keystoneclient
 python-neutronclient
