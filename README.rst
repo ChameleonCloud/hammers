@@ -35,6 +35,12 @@ Collection of various tools to keep things ship-shape. Not particularly bright t
   ``orphan-resource-providers {info, update}``
 
   Detects and updates resource providers whose UUID has not been updated to match a recreated Nova compute node.
+  
+6. Send notifications about reservation usage
+
+  ``reservation-usage-notification``
+  
+  Check and notify users about their reservation.
 
 Common options:
 
@@ -112,4 +118,11 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
     user => 'root',
     hour => 5,
     minute => 40,
+  }
+  # Add the following to bare-metal sites only
+  cron { 'hammers-reservationusagenotification':
+    command => "$venv_bin/reservation-usage-notification 2>&1 | /usr/bin/logger -t hammers-reservationusagenotification",
+    user => 'root',
+    hour => 10,
+    minute => 0,
   }
