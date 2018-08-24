@@ -62,6 +62,27 @@ def days_past(dt):
     return (datetime.datetime.utcnow() - dt).total_seconds() / (60*60*24)
 
 
+def lease_takedown_failed(db, floating_ip_id, project_id):
+    '''
+    Checks if resource removal on lease expiration failed.
+    '''
+    lease = query.floating_ip_to_lease(
+        db, floating_ip_id, project_id)
+
+    action = lease[1]
+    end_date = lease[2]
+    deleted_at = lease[3]
+    on_end_status = query.lease_event_status(db, lease[0], 'on_end')[0]
+
+    if (action == 'START' and
+        end_date < datetime.datetime.utcnow() and
+        on_end_status == 'ERROR'):
+
+        return True 
+    else:
+        return False
+
+
 def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, quiet=False):
     future_projects = set()
     db_names = ['nova']
@@ -114,9 +135,15 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
             # the HTTP endpoint
             for resource in resource_query(db, proj_id):
                 to_delete.append(resource['id'])
-                if resource['status'] != 'DOWN':
+
+                if (resource['status'] != 'DOWN' and
+                    not lease_takedown_failed(db, resource['id'], proj_id)):
+
                     not_down.append(resource)
         if not_down:
+            if not kvm:
+                pass
+                #check if rogue instance
             raise RuntimeError('error: not all {}s selected are in "DOWN" state'
                                '.\n\n{}'.format(type_, not_down))
         for resource_id in to_delete:
