@@ -156,12 +156,13 @@ def owned_ips(db, project_ids):
 @query
 def floating_ip_to_lease(db, floating_ip_id, project_id):
     '''Return lease of an Active floating ip address.'''
+    print(project_id)
+    print(floating_ip_id)
     sql = '''
-    SELECT bl.lease_id
-        , bl.action
-        , bl.end_date
-        , bl.deleted_at
-        ,  
+    SELECT bl.id AS lease_id
+        , bl.action AS action
+        , bl.end_date AS end_date
+        , bl.deleted_at AS deleted_at
     FROM neutron.floatingips nfi
     LEFT JOIN neutron.ports np ON nfi.fixed_port_id=np.id
     LEFT JOIN nova.instances ni ON np.device_id=ni.uuid
@@ -170,11 +171,10 @@ def floating_ip_to_lease(db, floating_ip_id, project_id):
     LEFT JOIN blazar.computehost_allocations bca ON bca.compute_host_id=bc.id
     LEFT JOIN blazar.reservations br ON bca.reservation_id=br.id
     LEFT JOIN blazar.leases bl ON br.lease_id=bl.id
-    WHERE nfi.floating_ip_address={floating_ip_id}
-        AND bl.deleted_at is NULL 
-        AND {project_id}=bl.project_id;
-    '''.format(floating_ip=floating_ip, project_id=project_id)
-
+    WHERE nfi.id='{floating_ip_id}'
+        AND bl.project_id='{project_id}'
+        AND bl.deleted_at is NULL;
+    '''.format(floating_ip_id=floating_ip_id, project_id=project_id)
     return db.query(sql, limit=None)
 
 @query
@@ -183,7 +183,7 @@ def lease_event_status(db, lease_id, event_type):
     sql = '''
     SELECT status
     FROM blazar.events
-    WHERE lease_id={lease_id} AND event_type={event_type};
+    WHERE lease_id='{lease_id}' AND event_type='{event_type}';
     '''.format(lease_id=lease_id, event_type=event_type)
     
     return db.query(sql, limit=1)

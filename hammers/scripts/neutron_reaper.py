@@ -66,21 +66,27 @@ def lease_takedown_failed(db, floating_ip_id, project_id):
     '''
     Checks if resource removal on lease expiration failed.
     '''
-    lease = query.floating_ip_to_lease(
-        db, floating_ip_id, project_id)
+    for lease in query.floating_ip_to_lease(db, floating_ip_id, project_id):  
+	print("LEASE: %s" % str(lease))
+        action = lease.pop('action')
+        print(action)
+        end_date = lease.pop('end_date')
+        print(end_date)
+        deleted_at = lease.pop('deleted_at')
+        print(deleted_at)
+        on_end_status = [
+            x['status'] for x
+            in query.lease_event_status(db, lease.pop('lease_id'), 'on_end')]
+        print(on_end_status)
 
-    action = lease[1]
-    end_date = lease[2]
-    deleted_at = lease[3]
-    on_end_status = query.lease_event_status(db, lease[0], 'on_end')[0]
+        if (action == 'START' and
+            end_date < datetime.datetime.utcnow() and
+            on_end_status == 'ERROR'):
 
-    if (action == 'START' and
-        end_date < datetime.datetime.utcnow() and
-        on_end_status == 'ERROR'):
-
-        return True 
-    else:
-        return False
+           return True 
+        else:
+           return False
+    return False
 
 
 def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, quiet=False):
@@ -135,7 +141,7 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
             # the HTTP endpoint
             for resource in resource_query(db, proj_id):
                 to_delete.append(resource['id'])
-
+                print(lease_takedown_failed(db, '8d7d6fa3-f08c-4f08-98c7-59e803d14ab1', '975c0a94b784483a885f4503f70af655'))
                 if (resource['status'] != 'DOWN' and
                     not lease_takedown_failed(db, resource['id'], proj_id)):
 
@@ -155,6 +161,9 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
         for proj_id in too_idle_project_ids:
             for resource in resource_query(db, proj_id):
                 assert proj_id == resource.pop('project_id')
+                #print(resource)
+                #print(lease_takedown_failed(db, resource['id'], proj_id))
+                print(lease_takedown_failed(db, '8d7d6fa3-f08c-4f08-98c7-59e803d14ab1', '975c0a94b784483a885f4503f70af655'))
                 projects[proj_id][resource.pop('id')] = resource
                 n_things_to_remove += 1
         if (not quiet) or n_things_to_remove:
