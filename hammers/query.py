@@ -153,11 +153,37 @@ def owned_ips(db, project_ids):
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_ids], limit=None)
 
+@query
+def floating_ips_to_leases(db, floating_ip_ids):
+    '''Return 'active' leases from a tuple of floating ip ids.'''
+    floating_ips_varargs = ','.join(['%s'] * len(floating_ip_ids))
+
+    sql = '''
+    SELECT bl.id AS lease_id
+        , bl.action AS action
+        , bl.end_date AS end_date
+        , bl.deleted_at AS deleted_at
+	    , nfi.id AS ip_id
+    FROM neutron.floatingips nfi
+    LEFT JOIN neutron.ports np ON nfi.fixed_port_id=np.id
+    LEFT JOIN nova.instances ni ON np.device_id=ni.uuid
+    LEFT JOIN ironic.nodes ino ON ni.uuid=ino.instance_uuid
+    LEFT JOIN blazar.computehosts bc ON ino.uuid = bc.hypervisor_hostname
+    LEFT JOIN blazar.computehost_allocations bca ON bca.compute_host_id=bc.id
+    LEFT JOIN blazar.reservations br ON bca.reservation_id=br.id
+    LEFT JOIN blazar.leases bl ON br.lease_id=bl.id
+    WHERE bl.project_id=nfi.project_id
+        AND bl.deleted_at is NULL
+        AND nfi.id IN ({floating_ips_varargs});
+    '''.format(floating_ips_varargs=floating_ips_varargs)
+
+    return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
-def owned_compute_ip_single(db, project_id):
+def owned_compute_ip_single(db, args=floating_ip_ids, project_id):
     '''
-    Return all IPs associated with *project_id* and if associated with a port, whose fixed port is owned by compute
+    Return all IPs associated with *project_id* and if associated with a port,
+    whose fixed port is owned by compute
     '''
     sql = '''
     SELECT f.id
