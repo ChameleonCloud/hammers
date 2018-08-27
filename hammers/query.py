@@ -174,10 +174,10 @@ def floating_ips_to_leases(db, floating_ip_ids):
     LEFT JOIN blazar.leases bl ON br.lease_id=bl.id
     WHERE bl.project_id=nfi.project_id
         AND bl.deleted_at is NULL
-        AND nfi.id IN ({floating_ip_ids});
-    '''.format(floating_ip_ids=str(floating_ip_ids))
+        AND nfi.id IN ({floating_ips_varargs});
+    '''.format(floating_ips_varargs=floating_ips_varargs)
 
-    return db.query(sql, limit=None)
+    return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
 def owned_compute_ip_single(db, args=floating_ip_ids, project_id):

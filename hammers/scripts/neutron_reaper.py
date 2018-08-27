@@ -69,6 +69,7 @@ def check_failed_lease_takedown(db, not_down):
     ip address from not_down list.
     '''
     ip_ids = tuple([str(x['id']) for x in not_down])
+
     for lease in query.floating_ips_to_leases(db, ip_ids):
 
         if (lease.pop('action') == 'START' and
