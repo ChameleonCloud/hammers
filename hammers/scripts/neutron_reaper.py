@@ -62,31 +62,18 @@ def days_past(dt):
     return (datetime.datetime.utcnow() - dt).total_seconds() / (60*60*24)
 
 
-def lease_takedown_failed(db, floating_ip_id, project_id):
+def check_failed_lease_takedown(db, not_down):
     '''
     Checks if resource removal on lease expiration failed.
     '''
-    for lease in query.floating_ip_to_lease(db, floating_ip_id, project_id):  
-	print("LEASE: %s" % str(lease))
-        action = lease.pop('action')
-        print(action)
-        end_date = lease.pop('end_date')
-        print(end_date)
-        deleted_at = lease.pop('deleted_at')
-        print(deleted_at)
-        on_end_status = [
-            x['status'] for x
-            in query.lease_event_status(db, lease.pop('lease_id'), 'on_end')]
-        print(on_end_status)
-
-        if (action == 'START' and
-            end_date < datetime.datetime.utcnow() and
-            on_end_status == 'ERROR'):
-
-           return True 
-        else:
-           return False
-    return False
+    ip_ids = tuple([str(x['id']) for x in not_down])
+    for lease in query.floating_ips_to_leases(db, ip_ids):
+        if (lease.pop('action') == 'START' and
+            lease.pop('end_date') < datetime.datetime.utcnow()):
+            
+            for idx, ip in enumerate(not_down):
+                if lease.get('ip_id') == str(ip['id']):
+                    del not_down[idx]
 
 
 def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, quiet=False):
@@ -141,17 +128,15 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
             # the HTTP endpoint
             for resource in resource_query(db, proj_id):
                 to_delete.append(resource['id'])
-                print(lease_takedown_failed(db, '8d7d6fa3-f08c-4f08-98c7-59e803d14ab1', '975c0a94b784483a885f4503f70af655'))
-                if (resource['status'] != 'DOWN' and
-                    not lease_takedown_failed(db, resource['id'], proj_id)):
-
+                if (resource['status'] != 'DOWN'):
                     not_down.append(resource)
+
+        if not_down and not kvm and type_=='ip':
+            check_failed_lease_takedown(db, not_down)
+            
         if not_down:
-            if not kvm:
-                pass
-                #check if rogue instance
             raise RuntimeError('error: not all {}s selected are in "DOWN" state'
-                               '.\n\n{}'.format(type_, not_down))
+                '.\n\n{}'.format(type_, not_down))
         for resource_id in to_delete:
             command(auth, resource_id)
             n_things_to_remove += 1
@@ -161,9 +146,6 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
         for proj_id in too_idle_project_ids:
             for resource in resource_query(db, proj_id):
                 assert proj_id == resource.pop('project_id')
-                #print(resource)
-                #print(lease_takedown_failed(db, resource['id'], proj_id))
-                print(lease_takedown_failed(db, '8d7d6fa3-f08c-4f08-98c7-59e803d14ab1', '975c0a94b784483a885f4503f70af655'))
                 projects[proj_id][resource.pop('id')] = resource
                 n_things_to_remove += 1
         if (not quiet) or n_things_to_remove:
