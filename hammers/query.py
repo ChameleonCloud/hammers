@@ -156,6 +156,8 @@ def owned_ips(db, project_ids):
 @query
 def floating_ips_to_leases(db, floating_ip_ids):
     '''Return 'active' leases from a tuple of floating ip ids.'''
+    floating_ips_varargs = ','.join(['%s'] * len(floating_ip_ids))
+
     sql = '''
     SELECT bl.id AS lease_id
         , bl.action AS action
@@ -172,13 +174,13 @@ def floating_ips_to_leases(db, floating_ip_ids):
     LEFT JOIN blazar.leases bl ON br.lease_id=bl.id
     WHERE bl.project_id=nfi.project_id
         AND bl.deleted_at is NULL
-        AND nfi.id IN {floating_ip_ids};
+        AND nfi.id IN ({floating_ip_ids});
     '''.format(floating_ip_ids=str(floating_ip_ids))
 
     return db.query(sql, limit=None)
 
 @query
-def owned_compute_ip_single(db, project_id):
+def owned_compute_ip_single(db, args=floating_ip_ids, project_id):
     '''
     Return all IPs associated with *project_id* and if associated with a port,
     whose fixed port is owned by compute
