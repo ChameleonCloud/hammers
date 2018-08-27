@@ -180,7 +180,7 @@ def floating_ips_to_leases(db, floating_ip_ids):
     return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
-def owned_compute_ip_single(db, args=floating_ip_ids, project_id):
+def owned_compute_ip_single(db, project_id):
     '''
     Return all IPs associated with *project_id* and if associated with a port,
     whose fixed port is owned by compute
