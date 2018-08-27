@@ -64,10 +64,13 @@ def days_past(dt):
 
 def check_failed_lease_takedown(db, not_down):
     '''
-    Checks if resource removal on lease expiration failed.
+    Checks if a lease failed to disassociate a floating
+    ip address when the lease expired, and removes
+    ip address from not_down list.
     '''
     ip_ids = tuple([str(x['id']) for x in not_down])
     for lease in query.floating_ips_to_leases(db, ip_ids):
+
         if (lease.pop('action') == 'START' and
             lease.pop('end_date') < datetime.datetime.utcnow()):
             
@@ -131,6 +134,8 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
                 if (resource['status'] != 'DOWN'):
                     not_down.append(resource)
 
+        # Check if ips were not properly removed from lease
+        # that expired.
         if not_down and not kvm and type_=='ip':
             check_failed_lease_takedown(db, not_down)
             

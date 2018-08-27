@@ -155,13 +155,13 @@ def owned_ips(db, project_ids):
 
 @query
 def floating_ips_to_leases(db, floating_ip_ids):
-    '''Return lease of an Active floating ip address.'''
+    '''Return 'active' leases from a tuple of floating ip ids.'''
     sql = '''
     SELECT bl.id AS lease_id
         , bl.action AS action
         , bl.end_date AS end_date
         , bl.deleted_at AS deleted_at
-	      , nfi.id AS ip_id
+	    , nfi.id AS ip_id
     FROM neutron.floatingips nfi
     LEFT JOIN neutron.ports np ON nfi.fixed_port_id=np.id
     LEFT JOIN nova.instances ni ON np.device_id=ni.uuid
