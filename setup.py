@@ -26,6 +26,7 @@ setup(
             'curiouser = hammers.scripts.curiouser:main',
             'dirty-ports = hammers.scripts.dirty_ports:main',
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
+            'metadata-sync = hammers.scripts.metadata_sync:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
             'ironic-error-resetter = hammers.scripts.ironic_error_resetter:main',
             'orphan-resource-providers = hammers.scripts.orphan_resource_providers:main',
