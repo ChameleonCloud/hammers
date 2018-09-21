@@ -31,6 +31,7 @@ setup(
             'ironic-error-resetter = hammers.scripts.ironic_error_resetter:main',
             'orphan-resource-providers = hammers.scripts.orphan_resource_providers:main',
             'undead-instances = hammers.scripts.undead_instances:main',
+            'orphans-detector = hammers.scripts.orphans_detector:main',
         ],
     },
 

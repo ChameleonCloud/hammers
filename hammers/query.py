@@ -245,6 +245,67 @@ def future_reservations(db):
     '''
     return db.query(sql, limit=None)
 
+@query
+def active_instances(db):
+    '''
+    Get active instances.
+    '''
+    sql = '''
+    SELECT DISTINCT uuid, user_id, project_id 
+    FROM nova.instances 
+    WHERE deleted_at is NULL;
+    '''
+    return db.query(sql, limit=None)
+
+@query
+def orphans(db, orphan_type):
+    '''
+    Get orphans of certain type that haven't been deleted,  along with users' and projects' information. 
+    '''
+    db_tables = []
+    conditions = '0'
+    id_name = 'id'
+    if orphan_type == 'lease':
+        db_tables.append('blazar.leases') 
+        conditions = 'end_date > Now() AND deleted_at is NULL'
+    elif orphan_type == 'instance':
+        db_tables = [t + '.instances' for t in _LATEST_INSTANCE_DATABASES]
+        conditions = 'deleted_at is NULL'
+        id_name = 'uuid'
+    else:
+        raise RuntimeError('Orphan type of {} is not supported'.format(orphan_type))
+    
+    projcol = project_col(db.version)
+    result = []
+    for t in db_tables:
+        sql = '''
+        SELECT m.id, m.user_id AS user_id, project_id, lu.name AS user_name, p.name AS project_name, u.enabled AS user_enabled, p.enabled AS project_enabled 
+        FROM (
+                SELECT {id_name} AS id, user_id, {projcol} AS project_id
+                FROM {db_table_name}
+                WHERE {conditions}
+             ) AS m
+        LEFT JOIN keystone.local_user AS lu ON lu.user_id = m.user_id 
+        LEFT JOIN keystone.user AS u ON u.id = m.user_id
+        LEFT JOIN keystone.project AS p ON p.id = m.project_id
+        WHERE m.user_id IS NULL
+        OR project_id IS NULL
+        OR u.enabled = 0
+        OR p.enabled = 0
+        OR (
+            u.enabled = 1 AND p.enabled = 1
+            AND NOT EXISTS (
+               SELECT 1
+               FROM keystone.assignment AS a
+               WHERE type = 'UserProject'
+               AND a.actor_id = m.user_id
+               AND a.target_id = m.project_id
+            )
+        ) 
+        '''.format(id_name=id_name, projcol=projcol, db_table_name=t, conditions=conditions)
+        result += db.query(sql, limit=None)
+    
+    return result
 
 @query
 def clear_ironic_port_internalinfo(db, port_id):
