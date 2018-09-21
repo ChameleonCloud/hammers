@@ -100,4 +100,4 @@ Servers
 
 .. automodule:: ccmanage.server
 
-    .. autoclass:: Server(lease, key='default', image='CC-CentOS7', net_ids=None, net_name=None, **extra)
+    .. autoclass:: Server(session, id=None, lease=None, key='default', image='CC-CentOS7', net_ids=None, net_name=None, **extra)

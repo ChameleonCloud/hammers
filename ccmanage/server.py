@@ -106,30 +106,42 @@ class Server(object):
     """
     Launches an instance on a lease.
     """
-    def __init__(self, lease, key='default', image=DEFAULT_IMAGE, **extra):
-        self.lease = lease
-        self.session = self.lease.session
+    def __init__(self, session, id=None, lease=None, key='default', image=DEFAULT_IMAGE, **extra):
+        self.session = session
+
         self.neutron = NeutronClient(session=self.session, region_name=os.environ.get('OS_REGION_NAME'))
         self.nova = NovaClient('2', session=self.session, region_name=os.environ.get('OS_REGION_NAME'))
         self.glance = GlanceClient('2', session=self.session, region_name=os.environ.get('OS_REGION_NAME'))
+        self.image = resolve_image_idname(self.glance, image)
+
         self.ip = None
         self._fip = None
+        self._fip_created = False
+        self._preexisting = False
 
-        self.image = resolve_image_idname(self.glance, image)
+        extra.setdefault('_no_clean', False)
+        self._noclean = extra.pop('_no_clean')
 
         net_ids = extra.pop('net_ids', None)
         net_name = extra.pop('net_name', None)
         if net_ids is None and net_name is not None:
             net_ids = [get_networkid_byname(self.neutron, net_name)]
 
-        self.server_kwargs = instance_create_args(
-            self.lease.reservation, key=key, image=self.image, net_ids=net_ids,
-            **extra
-        )
-        self.server = self.nova.servers.create(**self.server_kwargs)
+        if id is not None:
+            self._preexisting = True
+            self.server = self.nova.servers.get(id)
+        elif lease is not None:
+            server_kwargs = instance_create_args(
+                lease.reservation, key=key, image=self.image, net_ids=net_ids,
+                **extra
+            )
+            self.server = self.nova.servers.create(**server_kwargs)
+            # print('created instance {}'.format(self.server.id))
+        else:
+            raise ValueError("Missing required argument: 'id' or 'lease' required.")
+
         self.id = self.server.id
         self.name = self.server.name
-        # print('created instance {}'.format(self.server.id))
 
     def __repr__(self):
         netloc = urllib.parse.urlsplit(self.session.auth.auth_url).netloc
@@ -137,6 +149,19 @@ class Server(object):
             # drop if default port
             netloc = netloc[:-5]
         return '<{} \'{}\' on {} ({})>'.format(self.__class__.__name__, self.name, netloc, self.id)
+
+    def __enter__(self):
+        self.wait()
+        return self
+
+    def __exit__(self, exc_type, exc, exc_tb):
+        if exc is not None and self._noclean:
+            print('Instance existing uncleanly (noclean = True).')
+            return
+
+        self.disassociate_floating_ip()
+        if not self._preexisting:
+            self.delete()
 
     def refresh(self):
         now = time.monotonic()
@@ -169,13 +194,15 @@ class Server(object):
         # check a couple for fast failures
         for _ in range(3):
             time.sleep(10)
+            if self.ready:
+                return
             if self.error:
                 raise ServerError(self.server.fault, self.server)
         time.sleep(5 * 60)
         for _ in range(100):
             time.sleep(10)
             if self.ready:
-                break
+                return
             if self.error:
                 raise ServerError(self.server.fault, self.server)
         else:
@@ -184,6 +211,7 @@ class Server(object):
 
     def associate_floating_ip(self):
         created, self._fip = get_create_floatingip(self.neutron)
+        self._fip_created = created
         self.ip = self._fip['floating_ip_address']
         try:
             self.server.add_floating_ip(self.ip)
@@ -204,6 +232,18 @@ class Server(object):
             })
         return self.ip
 
+    def disassociate_floating_ip(self):
+        if self.ip is None:
+            return
+
+        self.server.remove_floating_ip(self.ip)
+        if self._fip_created:
+            self.neutron.delete_floatingip(self._fip['id'])
+
+        self.ip = None
+        self._fip = None
+        self._fip_created = False
+
     def delete(self):
         self.server.delete()
         # wait for deletion complete
@@ -215,7 +255,7 @@ class Server(object):
                 if "HTTP 404" in str(e):
                     return
         else:
-            raise RuntimeError('timeout, server failed to terminate')    
+            raise RuntimeError('timeout, server failed to terminate')
 
     def rebuild(self, idname):
         self.image = resolve_image_idname(self.glance, idname)

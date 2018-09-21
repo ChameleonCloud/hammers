@@ -3,6 +3,8 @@ mysqlclient
 python-dateutil
 requests
 jinja2
+keystoneauth1
+python-keystoneclient
 
 # dev/deploy
 invoke

@@ -37,6 +37,8 @@ BLAZAR_IGNORE_PREFIX = [
     'status',
     'trust_id',
     'su_factor',
+    'availability_zone',
+    'reservable',
     # Keys below are accessible via hypervisor_properties, not
     # resource_properties
     'vcpus',

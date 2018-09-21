@@ -153,11 +153,37 @@ def owned_ips(db, project_ids):
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_ids], limit=None)
 
+@query
+def floating_ips_to_leases(db, floating_ip_ids):
+    '''Return 'active' leases from a tuple of floating ip ids.'''
+    floating_ips_varargs = ','.join(['%s'] * len(floating_ip_ids))
+
+    sql = '''
+    SELECT bl.id AS lease_id
+        , bl.action AS action
+        , bl.end_date AS end_date
+        , bl.deleted_at AS deleted_at
+	    , nfi.id AS ip_id
+    FROM neutron.floatingips nfi
+    LEFT JOIN neutron.ports np ON nfi.fixed_port_id=np.id
+    LEFT JOIN nova.instances ni ON np.device_id=ni.uuid
+    LEFT JOIN ironic.nodes ino ON ni.uuid=ino.instance_uuid
+    LEFT JOIN blazar.computehosts bc ON ino.uuid = bc.hypervisor_hostname
+    LEFT JOIN blazar.computehost_allocations bca ON bca.compute_host_id=bc.id
+    LEFT JOIN blazar.reservations br ON bca.reservation_id=br.id
+    LEFT JOIN blazar.leases bl ON br.lease_id=bl.id
+    WHERE bl.project_id=nfi.project_id
+        AND bl.deleted_at is NULL
+        AND nfi.id IN ({floating_ips_varargs});
+    '''.format(floating_ips_varargs=floating_ips_varargs)
+
+    return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
 def owned_compute_ip_single(db, project_id):
     '''
-    Return all IPs associated with *project_id* and if associated with a port, whose fixed port is owned by compute
+    Return all IPs associated with *project_id* and if associated with a port,
+    whose fixed port is owned by compute
     '''
     sql = '''
     SELECT f.id
@@ -219,6 +245,67 @@ def future_reservations(db):
     '''
     return db.query(sql, limit=None)
 
+@query
+def active_instances(db):
+    '''
+    Get active instances.
+    '''
+    sql = '''
+    SELECT DISTINCT uuid, user_id, project_id 
+    FROM nova.instances 
+    WHERE deleted_at is NULL;
+    '''
+    return db.query(sql, limit=None)
+
+@query
+def orphans(db, orphan_type):
+    '''
+    Get orphans of certain type that haven't been deleted,  along with users' and projects' information. 
+    '''
+    db_tables = []
+    conditions = '0'
+    id_name = 'id'
+    if orphan_type == 'lease':
+        db_tables.append('blazar.leases') 
+        conditions = 'end_date > Now() AND deleted_at is NULL'
+    elif orphan_type == 'instance':
+        db_tables = [t + '.instances' for t in _LATEST_INSTANCE_DATABASES]
+        conditions = 'deleted_at is NULL'
+        id_name = 'uuid'
+    else:
+        raise RuntimeError('Orphan type of {} is not supported'.format(orphan_type))
+    
+    projcol = project_col(db.version)
+    result = []
+    for t in db_tables:
+        sql = '''
+        SELECT m.id, m.user_id AS user_id, project_id, lu.name AS user_name, p.name AS project_name, u.enabled AS user_enabled, p.enabled AS project_enabled 
+        FROM (
+                SELECT {id_name} AS id, user_id, {projcol} AS project_id
+                FROM {db_table_name}
+                WHERE {conditions}
+             ) AS m
+        LEFT JOIN keystone.local_user AS lu ON lu.user_id = m.user_id 
+        LEFT JOIN keystone.user AS u ON u.id = m.user_id
+        LEFT JOIN keystone.project AS p ON p.id = m.project_id
+        WHERE m.user_id IS NULL
+        OR project_id IS NULL
+        OR u.enabled = 0
+        OR p.enabled = 0
+        OR (
+            u.enabled = 1 AND p.enabled = 1
+            AND NOT EXISTS (
+               SELECT 1
+               FROM keystone.assignment AS a
+               WHERE type = 'UserProject'
+               AND a.actor_id = m.user_id
+               AND a.target_id = m.project_id
+            )
+        ) 
+        '''.format(id_name=id_name, projcol=projcol, db_table_name=t, conditions=conditions)
+        result += db.query(sql, limit=None)
+    
+    return result
 
 @query
 def clear_ironic_port_internalinfo(db, port_id):

@@ -35,8 +35,14 @@ Collection of various tools to keep things ship-shape. Not particularly bright t
   ``orphan-resource-providers {info, update}``
 
   Detects and updates resource providers whose UUID has not been updated to match a recreated Nova compute node.
-  
-6. Send notifications about reservation usage
+
+6. Detect orphan leases and instances
+
+  ``orphans-detector``
+
+  Detects leases and instances whose user is disabled or project is disabled or the user does not belong to the project.
+
+7. Send notifications about reservation usage
 
   ``reservation-usage-notification``
   
@@ -119,10 +125,18 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
     hour => 5,
     minute => 40,
   }
+<<<<<<< HEAD
   # Add the following to bare-metal sites only
   cron { 'hammers-reservationusagenotification':
     command => "$venv_bin/reservation-usage-notification 2>&1 | /usr/bin/logger -t hammers-reservationusagenotification",
     user => 'root',
     hour => 10,
     minute => 0,
+=======
+  cron { 'hammers-orphansdetector':
+    command => "$venv_bin/orphans-detector --slack $slack_json_loc [--kvm if at KVM site] 2>&1 | /usr/bin/logger -t hammers-orphansdetector",
+    user => 'root',
+    hour => 5,
+    minute => 45,
+>>>>>>> master
   }
