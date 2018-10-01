@@ -136,7 +136,7 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
         # Check if ips were not properly removed from lease
         # that expired.
         if not_down and not kvm and type_=='ip':
-            check_failed_lease_takedown(db, not_down)
+            check_lease_past_end_date(db, not_down)
 
         if not_down:
             raise RuntimeError('error: not all {}s selected are in "DOWN" state'
