@@ -163,7 +163,6 @@ def floating_ips_to_leases(db, floating_ip_ids):
     SELECT bl.id AS lease_id
         , bl.end_date AS end_date
         , nfi.id AS ip_id
-        , nfi.status AS status
     FROM neutron.floatingips nfi
     LEFT JOIN neutron.ports np ON nfi.fixed_port_id=np.id
     LEFT JOIN nova.instances ni ON np.device_id=ni.uuid
