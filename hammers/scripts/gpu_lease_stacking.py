@@ -6,11 +6,11 @@ import sys
 import argparse
 from pprint import pprint
 
-from hammers import MySqlArgs, query
+from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
 
-def reaper(db, auth, describe=False, quiet=False):
+def reaper(db, auth, whitelist=None, describe=False, quiet=False):
     """"""
     user_gpu_leases = {}
 
@@ -67,7 +67,7 @@ def main(argv=None):
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
     parser.add_argument('--slack', type=str,
-        help=help='JSON file with Slack webhook information to send a notification to')
+        help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('action', choices=['info', 'delete'],
         help='Just display info or actually delete them?')
 
@@ -90,9 +90,9 @@ def main(argv=None):
 
     kwargs = {
         'db': db,
-        'auth' = auth,
-        'whitelist' = whitelist,
-        'describe' = args.action == 'info',
+        'auth': auth,
+        'whitelist': whitelist,
+        'describe': args.action == 'info',
         'quiet': args.quiet
     }
 

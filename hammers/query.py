@@ -196,22 +196,10 @@ def gpu_leases(db):
         AND bc.id=bce.computehost_id
         AND bce.capability_name='node_type'
         AND bce.capability_value LIKE 'gpu_%'
-    LIMIT 100;
+    ORDER BY node_id, start_date ASC;
     '''
 
-    sql = '''
-    SELECT count(*)
-    FROM blazar.leases bl
-    RIGHT JOIN blazar.reservations br ON bl.id=br.lease_id
-    RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
-    RIGHT JOIN blazar.computehosts bc ON bca.compute_host_id=bc.id
-    LEFT JOIN blazar.computehost_extra_capabilities bce ON bc.id=bce.computehost_id
-    WHERE bl.start_date > CURDATE()
-        AND bc.id=bce.computehost_id
-        AND bce.capability_name='node_type'
-        AND bce.capability_value LIKE 'gpu_%'
-    LIMIT 100;
-    '''
+    return db.query(sql, limit=None)
 
 @query
 def owned_compute_ip_single(db, project_id):
