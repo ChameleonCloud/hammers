@@ -177,6 +177,41 @@ def floating_ips_to_leases(db, floating_ip_ids):
 
     return db.query(sql, args=floating_ip_ids, limit=None)
 
+@query
+def gpu_leases(db):
+    """"""
+    sql = '''
+    SELECT bl.user_id AS user_id
+        , bl.id AS lease_id
+        , bl.start_date AS start_date
+        , bl.end_date AS end_date
+        , bc.hypervisor_hostname AS node_id
+        , bce.capability_value AS gpu
+    FROM blazar.leases bl
+    RIGHT JOIN blazar.reservations br ON bl.id=br.lease_id
+    RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
+    RIGHT JOIN blazar.computehosts bc ON bca.compute_host_id=bc.id
+    LEFT JOIN blazar.computehost_extra_capabilities bce ON bc.id=bce.computehost_id
+    WHERE bl.start_date > CURDATE()
+        AND bc.id=bce.computehost_id
+        AND bce.capability_name='node_type'
+        AND bce.capability_value LIKE 'gpu_%'
+    LIMIT 100;
+    '''
+
+    sql = '''
+    SELECT count(*)
+    FROM blazar.leases bl
+    RIGHT JOIN blazar.reservations br ON bl.id=br.lease_id
+    RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
+    RIGHT JOIN blazar.computehosts bc ON bca.compute_host_id=bc.id
+    LEFT JOIN blazar.computehost_extra_capabilities bce ON bc.id=bce.computehost_id
+    WHERE bl.start_date > CURDATE()
+        AND bc.id=bce.computehost_id
+        AND bce.capability_name='node_type'
+        AND bce.capability_value LIKE 'gpu_%'
+    LIMIT 100;
+    '''
 
 @query
 def owned_compute_ip_single(db, project_id):
