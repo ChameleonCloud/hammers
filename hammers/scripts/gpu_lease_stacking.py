@@ -5,10 +5,40 @@
 import sys
 import argparse
 from pprint import pprint
+from datetime import datetime
 
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
+
+
+def find_stacked_leases(leases):
+
+    stacked = []
+
+    for i in range(len(leases)):
+  
+        start_date = leases[i][1]
+        end_date = leases[i][2]
+
+        if i > 0:
+            last_end_date = leases[i - 1][2]
+        else: 
+            last_end_date = datetime.min
+            
+        if i < len(leases) -1:
+            next_start_date = leases[i + 1][1]
+        else:
+            next_start_date = datetime.max
+        
+        stacked_previous = (start_date - last_end_date).days < 1
+        stacked_next = (next_start_date - end_date).days < 1
+
+        if stacked_previous or stacked_next:
+            stacked.append(leases[i])
+
+    return stacked
+            
 
 def reaper(db, auth, whitelist=None, describe=False, quiet=False):
     """"""
@@ -19,30 +49,31 @@ def reaper(db, auth, whitelist=None, describe=False, quiet=False):
         node_id = row['node_id']
 
         if user_id not in user_gpu_leases.keys():
-            user_gpu_leases[row['user_id']] = {}
+            user_gpu_leases[user_id] = {}
 
         if node_id not in user_gpu_leases[user_id].keys():
-            user_gpu_leases[user_id][node_id] = [
-                (row['lease_id'], row['start_date'])]
-        else:
-            user_gpu_leases[user_id][node_id].append(
-                (row['lease_id'], row['start_date']))
+            user_gpu_leases[user_id][node_id] = []
+
+        user_gpu_leases[user_id][node_id].append(
+            (row['lease_id'], row['start_date'], row['end_date']))
 
     leases_to_delete = []
     for user_id in user_gpu_leases.keys():
-        for node in user_gpu_leases[user_id].keys():
-            leases = user_gpu_leases[user_id][node_id]
+        for node_id in user_gpu_leases[user_id].keys():
+            leases = list(set(user_gpu_leases[user_id][node_id]))
             leases = list(sorted(leases, key=lambda x: x[1]))
-
-            if len(leases) > 1:
-                leases.extend(leases[1:])
+            stacked_leases = find_stacked_leases(leases)
+                
+            leases_to_delete.extend(stacked_leases[1:])
 
     if not describe:
         for lease_id, _ in leases_to_delete:
             # lease_delete(auth, lease_id)
             pass # until tested
     else:
-        pprint(user_gpu_leases)
+        #pprint(user_gpu_leases)
+        pprint(leases_to_delete)
+        print(len(leases_to_delete))
 
     return len(leases_to_delete)
 
