@@ -179,7 +179,7 @@ def floating_ips_to_leases(db, floating_ip_ids):
 
 @query
 def gpu_leases(db):
-    """"""
+    """Return all leases on GPUs ordered by node id and lease start date."""
     sql = '''
     SELECT bl.user_id AS user_id
         , bl.id AS lease_id

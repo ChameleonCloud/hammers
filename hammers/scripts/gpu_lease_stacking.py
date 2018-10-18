@@ -1,6 +1,12 @@
 # coding: utf-8
 '''
 .. code-block:: bash
+
+    gpu-lease-stacking {info, delete}
+
+Reclaims GPU nodes from leases that violate terms of use.
+
+* ``info`` to just display leases or actuall delete them with ``delete``
 '''
 import sys
 import argparse
@@ -13,24 +19,24 @@ from hammers.osrest.blazar import lease_delete
 
 
 def find_stacked_leases(leases):
-
+    """Return list of only the leases stacked on each other."""
     stacked = []
 
     for i in range(len(leases)):
-  
+
         start_date = leases[i][1]
         end_date = leases[i][2]
 
         if i > 0:
             last_end_date = leases[i - 1][2]
-        else: 
+        else:
             last_end_date = datetime.min
-            
-        if i < len(leases) -1:
+
+        if i < len(leases) - 1:
             next_start_date = leases[i + 1][1]
         else:
             next_start_date = datetime.max
-        
+
         stacked_previous = (start_date - last_end_date).days < 1
         stacked_next = (next_start_date - end_date).days < 1
 
@@ -38,10 +44,10 @@ def find_stacked_leases(leases):
             stacked.append(leases[i])
 
     return stacked
-            
 
-def reaper(db, auth, whitelist=None, describe=False, quiet=False):
-    """"""
+
+def reaper(db, auth, describe=False, quiet=False):
+    """Delete stacked leases on gpu nodes."""
     user_gpu_leases = {}
 
     for row in query.gpu_leases(db):
@@ -63,17 +69,15 @@ def reaper(db, auth, whitelist=None, describe=False, quiet=False):
             leases = list(set(user_gpu_leases[user_id][node_id]))
             leases = list(sorted(leases, key=lambda x: x[1]))
             stacked_leases = find_stacked_leases(leases)
-                
+
             leases_to_delete.extend(stacked_leases[1:])
 
     if not describe:
         for lease_id, _ in leases_to_delete:
-            # lease_delete(auth, lease_id)
-            pass # until tested
+            lease_delete(auth, lease_id)
+
     else:
-        #pprint(user_gpu_leases)
         pprint(leases_to_delete)
-        print(len(leases_to_delete))
 
     return len(leases_to_delete)
 
@@ -92,9 +96,6 @@ def main(argv=None):
     mysqlargs.inject(parser)
     osapi.add_arguments(parser)
 
-    parser.add_argument('-w', '--whitelist', type=str,
-        help='File of project/tenant IDs/names to ignore, one per line. '
-             'Ignores case and dashes.')
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
     parser.add_argument('--slack', type=str,
@@ -111,18 +112,12 @@ def main(argv=None):
     else:
         slack = None
 
-    whitelist = set()
-    if args.whitelist:
-        with open(args.whitelist) as f:
-            whitelist = {}
-
     db = mysqlargs.connect()
     db.version = 'ocata'
 
     kwargs = {
         'db': db,
         'auth': auth,
-        'whitelist': whitelist,
         'describe': args.action == 'info',
         'quiet': args.quiet
     }
@@ -137,10 +132,14 @@ def main(argv=None):
             (not args.quiet) or remove_count):
 
         if remove_count > 0:
-            message = ('')
+            message = (
+                'Commanded deletion of *{} leases* (GPU stacking restriction violated)'
+                .format(remove_count)
+            )
+            color = '#000000'
         else:
-            message = ('')
-
+            message = ('No leases on gpu nodes to delete.')
+            color = '#cccccc'
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
