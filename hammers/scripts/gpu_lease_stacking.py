@@ -17,6 +17,8 @@ from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
 
+LEASES_ALLOWED = 1
+
 
 def find_stacked_leases(leases):
     """Return list of only the leases stacked on each other."""
@@ -24,8 +26,7 @@ def find_stacked_leases(leases):
 
     for i in range(len(leases)):
 
-        start_date = leases[i][1]
-        end_date = leases[i][2]
+        _, start_date, end_date = leases[i]
 
         if i > 0:
             last_end_date = leases[i - 1][2]
@@ -64,16 +65,16 @@ def reaper(db, auth, describe=False, quiet=False):
             (row['lease_id'], row['start_date'], row['end_date']))
 
     leases_to_delete = []
-    for user_id in user_gpu_leases.keys():
-        for node_id in user_gpu_leases[user_id].keys():
+    for user_id in user_gpu_leases:
+        for node_id in user_gpu_leases[user_id]:
             leases = list(set(user_gpu_leases[user_id][node_id]))
             leases = list(sorted(leases, key=lambda x: x[1]))
             stacked_leases = find_stacked_leases(leases)
 
-            leases_to_delete.extend(stacked_leases[1:])
+            leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
 
     if not describe:
-        for lease_id, _ in leases_to_delete:
+        for lease_id, _, _ in leases_to_delete:
             lease_delete(auth, lease_id)
 
     else:
