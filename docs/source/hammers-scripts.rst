@@ -124,6 +124,10 @@ Metadata Sync
 
 .. automodule:: hammers.scripts.metadata_sync
 
+GPU Resource "Lease Stacking"
+---------------
+
+.. automodule:: hammers.scripts.gpu_lease_stacking
 
 .. _puppet_jobs:
 
@@ -165,6 +169,12 @@ is already done.
     }
     cron { 'hammers-orphanresourceproviders':
       command => "$venv_bin/orphan-resource-providers info --slack $slack_json_loc 2>&1 | /usr/bin/logger -t hammers-orphanresourceproviders",
+      user => 'root',
+      hour => 5,
+      minute => 40,
+    }
+    cron { 'hammers-gpuleasestacking':
+      command => "$venv bin/gpu-lease-stacking delete --slack $slack_json_loc 2>&1 | /usr/bin/logger -t hammers-gpuleasestacking",
       user => 'root',
       hour => 5,
       minute => 40,
