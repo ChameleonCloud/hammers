@@ -25,6 +25,7 @@ setup(
             'conflict-macs = hammers.scripts.conflict_macs:main',
             'curiouser = hammers.scripts.curiouser:main',
             'dirty-ports = hammers.scripts.dirty_ports:main',
+            'gpu-lease-stacking = hammers.scripts.gpu_lease_stacking:main',
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
             'metadata-sync = hammers.scripts.metadata_sync:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
