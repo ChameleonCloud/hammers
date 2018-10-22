@@ -196,6 +196,7 @@ def gpu_leases(db):
         AND bc.id=bce.computehost_id
         AND bce.capability_name='node_type'
         AND bce.capability_value LIKE 'gpu_%'
+        AND bl.deleted IS NULL
     ORDER BY node_id, start_date ASC;
     '''
 
