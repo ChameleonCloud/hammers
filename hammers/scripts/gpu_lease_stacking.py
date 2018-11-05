@@ -16,72 +16,118 @@ from datetime import datetime
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
+from hammers.notifications import email
+
 
 LEASES_ALLOWED = 1
 
 
-def find_stacked_leases(leases):
-    """Return list of only the leases stacked on each other."""
-    stacked = []
+class GPUUser:
+    def __init__(self, user_id, name, email):
+        self.user_id = user_id
+        self.name = name
+        self.email = email
+        self.nodes = {}
+        self.leases_to_delete = []
 
-    for i in range(len(leases)):
+    def add_lease(self, node_id, lease_id, start_date, end_date, **kwargs):
 
-        _, start_date, end_date = leases[i]
+        if node_id not in self.nodes:
+            self.nodes[node_id] = []
 
-        if i > 0:
-            last_end_date = leases[i - 1][2]
-        else:
-            last_end_date = datetime.min
+        self.nodes[node_id].append(lease_id, start_date, end_date)
 
-        if i < len(leases) - 1:
-            next_start_date = leases[i + 1][1]
-        else:
-            next_start_date = datetime.max
+    def delete_stacked_leases(self, auth):
+        """ """
+        for lease_id, _, _ in self.leases_to_delete:
+            lease_delete(auth, lease_id)
 
-        stacked_previous = (start_date - last_end_date).days < 1
-        stacked_next = (next_start_date - end_date).days < 1
+    def sort_leases_by_date(self):
 
-        if stacked_previous or stacked_next:
-            stacked.append(leases[i])
+        for node_id, leases in self.nodes.keys():
+            self.nodes[node_id] = list(sorted(
+                set(leases), key=lambda x: x[1]))
 
-    return stacked
+    def in_violation(self):
+        return len(self.leases_to_delete) > 1
+
+    def check_leases_for_stacks(self):
+
+        self.sort_leases_by_date()
+
+        for node_id, leases in self.nodes.items():
+            add_stacked_leases
+
+    def find_stacked_leases(self, leases):
+        """Return list of only the leases stacked on each other."""
+        stacked = []
+
+        for i in range(len(leases)):
+
+            _, start_date, end_date = leases[i]
+
+            if i > 0:
+                last_end_date = leases[i - 1][2]
+            else:
+                last_end_date = datetime.min
+
+            if i < len(leases) - 1:
+                next_start_date = leases[i + 1][1]
+            else:
+                next_start_date = datetime.max
+
+            stacked_previous = (start_date - last_end_date).days < 1
+            stacked_next = (next_start_date - end_date).days < 1
+
+            if stacked_previous or stacked_next:
+                stacked.append(leases[i])
+
+        return stacked
+
+    def send_delete_notification(self, sender):
+
+        email_body = email.get_email_template_by_name(
+            'stacked_leases_deleted_email_body')
+        html = email.render_template(
+            email_body, lease_list=",".join(self.leases_to_delete))
+        subject = ""
+        email.send(
+            email.get_host(),
+            self.email,
+            sender,
+            subject,
+            html.encode("utf8"))
 
 
-def reaper(db, auth, describe=False, quiet=False):
+def gpu_stack_reaper(db, auth, describe=False, quiet=False):
     """Delete stacked leases on gpu nodes."""
-    user_gpu_leases = {}
+    gpu_users = {}
 
     for row in query.gpu_leases(db):
         user_id = row['user_id']
-        node_id = row['node_id']
 
-        if user_id not in user_gpu_leases.keys():
-            user_gpu_leases[user_id] = {}
+        if user_id not in gpu_users.keys():
+            gpu_users[user_id] = GPUUser(
+                user_id=user_id,
+                name=row['user_name'],
+                email=row['user_name'])
 
-        if node_id not in user_gpu_leases[user_id].keys():
-            user_gpu_leases[user_id][node_id] = []
+        gpu_user[user_id].add_lease(row)
 
-        user_gpu_leases[user_id][node_id].append(
-            (row['lease_id'], row['start_date'], row['end_date']))
+    # Filter out users who are not stacking leases
+    users_in_violation = [x for x in gpu_users if x.in_violation()]
 
-    leases_to_delete = []
-    for user_id in user_gpu_leases:
-        for node_id in user_gpu_leases[user_id]:
-            leases = list(set(user_gpu_leases[user_id][node_id]))
-            leases = list(sorted(leases, key=lambda x: x[1]))
-            stacked_leases = find_stacked_leases(leases)
-
-            leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
-
+    lease_delete_count = 0
     if not describe:
-        for lease_id, _, _ in leases_to_delete:
-            lease_delete(auth, lease_id)
-
+        for user in users_in_violation:
+            lease_delete_count += len(user.leases_to_delete)
+            user.delete_stacked_leases()
+            user.send_email()
     else:
-        pprint(leases_to_delete)
+        for user in users_in_violation:
+            pprint(user.print_info())
 
-    return len(leases_to_delete)
-
+    return lease_delete_count
 
 def main(argv=None):
     if argv is None:
