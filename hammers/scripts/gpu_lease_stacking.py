@@ -23,7 +23,10 @@ LEASES_ALLOWED = 1
 
 
 class GPUUser:
+    """Class for user with advanced reservation on gpu nodes."""
+
     def __init__(self, user_id, name, email):
+        """Constructor."""
         self.user_id = user_id
         self.name = name
         self.email = email
@@ -31,32 +34,34 @@ class GPUUser:
         self.leases_to_delete = []
 
     def add_lease(self, node_id, lease_id, start_date, end_date, **kwargs):
-
+        """Add lease to node list."""
         if node_id not in self.nodes:
             self.nodes[node_id] = []
 
         self.nodes[node_id].append(lease_id, start_date, end_date)
 
     def delete_stacked_leases(self, auth):
-        """ """
+        """Delete leases in leases_to_delete."""
         for lease_id, _, _ in self.leases_to_delete:
             lease_delete(auth, lease_id)
 
     def sort_leases_by_date(self):
-
+        """Sort leases by date for each node."""
         for node_id, leases in self.nodes.keys():
             self.nodes[node_id] = list(sorted(
                 set(leases), key=lambda x: x[1]))
 
     def in_violation(self):
+        """Return boolean value for whether user has stacked gpu leases."""
         return len(self.leases_to_delete) > 1
 
     def check_leases_for_stacks(self):
-
+        """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
 
         for node_id, leases in self.nodes.items():
-            add_stacked_leases
+            stacked_leases = self.find_stacked_leases(leases)
+            self.leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
 
     def find_stacked_leases(self, leases):
         """Return list of only the leases stacked on each other."""
@@ -85,12 +90,12 @@ class GPUUser:
         return stacked
 
     def send_delete_notification(self, sender):
-
+        """Send email notifying user of leases deleted."""
         email_body = email.get_email_template_by_name(
             'stacked_leases_deleted_email_body')
         html = email.render_template(
             email_body, lease_list=",".join(self.leases_to_delete))
-        subject = ""
+        subject = "Your GPU lease(s) was deleted."
         email.send(
             email.get_host(),
             self.email,
@@ -98,8 +103,16 @@ class GPUUser:
             subject,
             html.encode("utf8"))
 
+    def print_info(self):
+        """Return dict of info for console output."""
+        return {
+            'user_name': self.name,
+            'user_email': self.email,
+            'leases': self.leases_to_delete
+        }
 
-def gpu_stack_reaper(db, auth, describe=False, quiet=False):
+
+def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
     """Delete stacked leases on gpu nodes."""
     gpu_users = {}
 
@@ -112,7 +125,7 @@ def gpu_stack_reaper(db, auth, describe=False, quiet=False):
                 name=row['user_name'],
                 email=row['user_name'])
 
-        gpu_user[user_id].add_lease(row)
+        gpu_users[user_id].add_lease(row)
 
     # Filter out users who are not stacking leases
     users_in_violation = [x for x in gpu_users if x.in_violation()]
@@ -122,7 +135,7 @@ def gpu_stack_reaper(db, auth, describe=False, quiet=False):
         for user in users_in_violation:
             lease_delete_count += len(user.leases_to_delete)
             user.delete_stacked_leases()
-            user.send_email()
+            user.send_email(sender)
     else:
         for user in users_in_violation:
             pprint(user.print_info())
@@ -143,12 +156,20 @@ def main(argv=None):
     mysqlargs.inject(parser)
     osapi.add_arguments(parser)
 
-    parser.add_argument('-q', '--quiet', action='store_true',
+    parser.add_argument(
+        '-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
-    parser.add_argument('action', choices=['info', 'delete'],
+    parser.add_argument(
+        '--slack', type=str,
+        help='JSON file with Slack webhook information')
+    parser.add_argument(
+        'action', choices=['info', 'delete'],
         help='Just display info or actually delete them?')
+    parser.add_argument(
+        '--sender',
+        type=str,
+        help='Email address of sender.',
+        default='noreply@chameleoncloud.org')
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
@@ -166,14 +187,15 @@ def main(argv=None):
         'db': db,
         'auth': auth,
         'describe': args.action == 'info',
-        'quiet': args.quiet
+        'quiet': args.quiet,
+        'sender': args.sender
     }
 
     if slack:
         with slack:
-            remove_count = reaper(**kwargs)
+            remove_count = gpu_stack_reaper(**kwargs)
     else:
-        remove_count = reaper(**kwargs)
+        remove_count = gpu_stack_reaper(**kwargs)
 
     if slack and (args.action == 'delete') and (
             (not args.quiet) or remove_count):
@@ -187,6 +209,7 @@ def main(argv=None):
         else:
             message = ('No leases on gpu nodes to delete.')
             color = '#cccccc'
+        slack.post('gpu-lease-stacking', message, color=color)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
