@@ -116,7 +116,7 @@ def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
     """Delete stacked leases on gpu nodes."""
     gpu_users = {}
 
-    for row in query.gpu_leases(db):
+    for row in query.get_gpu_advanced_reservations(db):
         user_id = row['user_id']
 
         if user_id not in gpu_users.keys():

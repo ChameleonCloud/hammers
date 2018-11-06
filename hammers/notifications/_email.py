@@ -69,7 +69,7 @@ def render_template(
     return tmpl.render(**kwargs)
 
 
-def send(email_host, to, sender, subject=None, body=none):
+def send(email_host, to, sender, subject=None, body=None):
     """Send email."""
     # convert `to` into list if string
     if type(to) is not list:
