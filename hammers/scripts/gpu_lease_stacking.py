@@ -96,7 +96,9 @@ def send_delete_notification(gpu_user, leases, sender):
     email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
     html = _email.render_template(
         email_body,
-        vars={'lease_list': [x[0] for x in leases]})
+        vars={
+            'username': gpu_user.name,
+            'lease_list': [x[0] for x in leases]})
     subject = "Your GPU lease(s) was deleted."
     _email.send(
         _email.get_host(),

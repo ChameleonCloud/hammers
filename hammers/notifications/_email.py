@@ -73,7 +73,7 @@ STACKED_LEASE_DELETED_EMAIL_BODY = '''
 <blockquote>
   <ul>
   {% for lease in vars['lease_list'] %}
-    <li><strong>{{ lease_list_str }}</strong></li>
+    <li><strong>{{ lease }}</strong></li>
   {% endfor %}
   </ul>
 </blockquote>
