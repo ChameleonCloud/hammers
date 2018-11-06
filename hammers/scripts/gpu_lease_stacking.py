@@ -8,8 +8,9 @@ Reclaims GPU nodes from leases that violate terms of use.
 
 * ``info`` to just display leases or actuall delete them with ``delete``
 '''
-import sys
 import argparse
+import json
+import sys
 from pprint import pprint
 from datetime import datetime
 
@@ -38,7 +39,7 @@ class GPUUser:
         if node_id not in self.nodes:
             self.nodes[node_id] = []
 
-        self.nodes[node_id].append(lease_id, start_date, end_date)
+        self.nodes[node_id].append((lease_id, start_date, end_date))
 
     def delete_stacked_leases(self, auth):
         """Delete leases in leases_to_delete."""
@@ -47,7 +48,7 @@ class GPUUser:
 
     def sort_leases_by_date(self):
         """Sort leases by date for each node."""
-        for node_id, leases in self.nodes.keys():
+        for node_id, leases in self.nodes.items():
             self.nodes[node_id] = list(sorted(
                 set(leases), key=lambda x: x[1]))
 
@@ -55,7 +56,7 @@ class GPUUser:
         """Return boolean value for whether user has stacked gpu leases."""
         return len(self.leases_to_delete) > 1
 
-    def check_leases_for_stacks(self):
+    def check_leases_for_stacking(self):
         """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
 
@@ -91,8 +92,7 @@ class GPUUser:
 
     def send_delete_notification(self, sender):
         """Send email notifying user of leases deleted."""
-        email_body = _email.get_email_template_by_name(
-            'stacked_leases_deleted_email_body')
+        email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
         html = _email.render_template(
             email_body, lease_list=",".join(self.leases_to_delete))
         subject = "Your GPU lease(s) was deleted."
@@ -123,19 +123,19 @@ def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
             gpu_users[user_id] = GPUUser(
                 user_id=user_id,
                 name=row['user_name'],
-                email=row['user_name'])
+                email=json.loads(row['user_extra'])['email'])
 
-        gpu_users[user_id].add_lease(row)
+        gpu_users[user_id].add_lease(**row)
 
     # Filter out users who are not stacking leases
-    users_in_violation = [x for x in gpu_users if x.in_violation()]
+    users_in_violation = [v for (k, v) in gpu_users.items() if v.in_violation()]
 
     lease_delete_count = 0
     if not describe:
         for user in users_in_violation:
             lease_delete_count += len(user.leases_to_delete)
             user.delete_stacked_leases()
-            user.send_email(sender)
+            user.send_delete_notification(sender)
     else:
         for user in users_in_violation:
             pprint(user.print_info())

@@ -11,6 +11,46 @@ logging.basicConfig()
 
 DEFAULT_EMAIL_HOST = '127.0.0.1'
 
+NO_REPLY_EMAIL_BASE = '''
+<style type="text/css">
+@font-face {{
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Open Sans Light'), local('OpenSans-Light'), url(http://fonts.gstatic.com/s/opensans/v13/DXI1ORHCpsQm3Vp6mXoaTa-j2U0lmluP9RWlSytm3ho.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+20B4, U+2DE0-2DFF, U+A640-A69F;
+}}
+.body {{
+    width: 90%;    margin: auto;
+    font-family: 'Open Sans', 'Helvetica', sans-serif;
+    font-size: 11pt;
+    color: #000000;
+}}
+a:link {{ color: #B40057; text-decoration: underline }}
+a:visited {{ color: #542A95; text-decoration: none }}
+a:hover {{ color: #B40057; background-color:#C4FFF9; text-decoration: underline }}
+</style>
+
+<div class="body">
+<p>Dear {{{{ vars['username'] }}}},</p>
+<br>
+
+{email_body}
+
+<br>
+<p><i>
+This is an automatic email, please <b>DO NOT</b> reply!
+If you have any question or issue, please submit a ticket on our <a href='https://www.chameleoncloud.org/user/help/' target='_blank'>help desk</a>.
+</i></p>
+
+<br><br>
+<p>Thanks,</p>
+<p>Chameleon Team</p>
+
+</div>
+<br><br>
+'''
+
 RESERVATION_START_EMAIL_BODY = '''
 <p>We're sending this email to remind you that your lease {{ vars['leasename'] }} (ID: {{ vars['leaseid'] }}) under project {{ vars['projectname'] }} on {{ vars['site'] }}
 will start on {{ vars['startdatetime_utc'] }} UTC / {{ vars['startdatetime_ct'] }} Central Time.</p>
@@ -26,12 +66,18 @@ or <a href='https://chameleoncloud.readthedocs.io/en/latest/technical/cli.html' 
 '''
 
 STACKED_LEASE_DELETED_EMAIL_BODY = '''
-<p>We're sending this email to inform you that that following leases have been
-   deleted due to a violation of our terms of service:
+<p>
+  We're sending this email to inform you that that following leases have been
+  deleted due to a violation of our terms of service:
 </p>
-
+<blockquote>
+  <strong>{{ lease_list_str }}</strong>
+</blockquote>
+<p>
+  Please do not make multiple consecutive leases on the same GPU node. If you
+  require a lease for longer than 1 week then please submit a formal request.
+</p>
 '''
-
 
 def get_host():
     """Return email host."""
@@ -49,20 +95,9 @@ def get_host():
     return email_host
 
 
-def get_email_template_by_name(filename):
-    """Return an email template by file name."""
-    current_dir = os.path.dirname(os.path.realpath(__file__))
-    file_path = "{directory}/templates/{filename}.html".format(
-        directory=current_dir, filename=filename)
-    f = codecs.open(file_path, 'r')
-
-    return f.read()
-
-
 def render_template(
-        email_body, base_template='no_reply_email_base', **kwargs):
+        email_body, base_template=NO_REPLY_EMAIL_BASE, **kwargs):
     """Render a Jinja template into HTML."""
-    base_template = get_email_template_by_name(base_template)
     tmpl = Environment(
         autoescape=select_autoescape(default_for_string=True)).from_string(
             base_template.format(email_body=email_body))
