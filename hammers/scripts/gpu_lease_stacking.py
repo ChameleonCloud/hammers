@@ -95,7 +95,7 @@ class GPUUser:
         email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
         html = _email.render_template(
             email_body,
-            vars={'lease_list': [x[0] for x in self.leases_to_delete])
+            vars={'lease_list': [x[0] for x in self.leases_to_delete]})
         subject = "Your GPU lease(s) was deleted."
         _email.send(
             _email.get_host(),
