@@ -83,13 +83,12 @@ class GPUUser:
 
         return stacked
 
-    def print_info(self):
+    def print_info(self, leases):
         """Return dict of info for console output."""
         return {
             'user_name': self.name,
             'user_email': self.email,
-            'leases': self.leases_to_delete
-        }
+            'leases': leases}
 
 
 def send_delete_notification(gpu_user, leases, sender):
@@ -132,7 +131,7 @@ def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
                 [lease_delete(auth, x[0]) for x in leases_in_violation]
                 send_delete_notification(gpu_user, leases_in_violation, sender)
             else:
-                pprint(gpu_user.print_info())
+                pprint(gpu_user.print_info(leases_in_violation))
 
     return lease_delete_count
 
