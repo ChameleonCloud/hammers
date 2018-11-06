@@ -32,7 +32,6 @@ class GPUUser:
         self.name = name
         self.email = email
         self.nodes = {}
-        self.leases_to_delete = []
 
     def add_lease(self, node_id, lease_id, start_date, end_date, **kwargs):
         """Add lease to node list."""
@@ -41,28 +40,22 @@ class GPUUser:
 
         self.nodes[node_id].append((lease_id, start_date, end_date))
 
-    def delete_stacked_leases(self, auth):
-        """Delete leases in leases_to_delete."""
-        for lease_id, _, _ in self.leases_to_delete:
-            lease_delete(auth, lease_id)
-
     def sort_leases_by_date(self):
         """Sort leases by date for each node."""
         for node_id, leases in self.nodes.items():
             self.nodes[node_id] = list(sorted(
                 set(leases), key=lambda x: x[1]))
 
-    def in_violation(self):
-        """Return boolean value for whether user has stacked gpu leases."""
-        return len(self.leases_to_delete) > 1
-
-    def check_leases_for_stacking(self):
+    def leases_in_violation(self):
         """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
+        leases_to_delete = []
 
         for node_id, leases in self.nodes.items():
             stacked_leases = self.find_stacked_leases(leases)
-            self.leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
+            leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
+
+        return leases_to_delete
 
     def find_stacked_leases(self, leases):
         """Return list of only the leases stacked on each other."""
@@ -90,20 +83,6 @@ class GPUUser:
 
         return stacked
 
-    def send_delete_notification(self, sender):
-        """Send email notifying user of leases deleted."""
-        email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
-        html = _email.render_template(
-            email_body,
-            vars={'lease_list': [x[0] for x in self.leases_to_delete]})
-        subject = "Your GPU lease(s) was deleted."
-        _email.send(
-            _email.get_host(),
-            self.email,
-            sender,
-            subject,
-            html.encode("utf8"))
-
     def print_info(self):
         """Return dict of info for console output."""
         return {
@@ -111,6 +90,21 @@ class GPUUser:
             'user_email': self.email,
             'leases': self.leases_to_delete
         }
+
+
+def send_delete_notification(gpu_user, leases, sender):
+    """Send email notifying user of leases deleted."""
+    email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
+    html = _email.render_template(
+        email_body,
+        vars={'lease_list': [x[0] for x in leases]})
+    subject = "Your GPU lease(s) was deleted."
+    _email.send(
+        _email.get_host(),
+        gpu_user.email,
+        sender,
+        subject,
+        html.encode("utf8"))
 
 
 def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
@@ -128,23 +122,17 @@ def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
 
         gpu_users[user_id].add_lease(**row)
 
-    # Check for lease Stacking
-    for gpu_user in gpu_users.values():
-        gpu_user.check_leases_for_stacking()
-
-    # Filter out users who are not stacking leases
-    users_in_violation = [
-        v for (k, v) in gpu_users.items() if v.in_violation()]
-
     lease_delete_count = 0
-    if not describe:
-        for user in users_in_violation:
-            lease_delete_count += len(user.leases_to_delete)
-            user.delete_stacked_leases()
-            user.send_delete_notification(sender)
-    else:
-        for user in users_in_violation:
-            pprint(user.print_info())
+    for gpu_user in gpu_users.values():
+        leases_in_violation = gpu_user.leases_in_violation()
+
+        if leases_in_violation:
+            if not describe:
+                lease_delete_count += len(leases_in_violation)
+                [lease_delete(auth, x[0]) for x in leases_in_violation]
+                send_delete_notification(gpu_user, leases_in_violation, sender)
+            else:
+                pprint(gpu_user.print_info())
 
     return lease_delete_count
 
