@@ -54,7 +54,7 @@ class GPUUser:
 
     def in_violation(self):
         """Return boolean value for whether user has stacked gpu leases."""
-        return len(self.leases_to_delete) > 1
+        return len(self.leases_to_delete) > 0
 
     def check_leases_for_stacking(self):
         """Check for lease stacking and add lease to delete list."""
