@@ -178,10 +178,12 @@ def floating_ips_to_leases(db, floating_ip_ids):
     return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
-def gpu_leases(db):
+def get_gpu_advanced_reservations(db):
     """Return all leases on GPUs ordered by node id and lease start date."""
     sql = '''
-    SELECT bl.user_id AS user_id
+    SELECT klu.name AS user_name
+        , ku.extra AS user_extra
+        , bl.user_id AS user_id
         , bl.id AS lease_id
         , bl.start_date AS start_date
         , bl.end_date AS end_date
@@ -192,6 +194,8 @@ def gpu_leases(db):
     RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
     RIGHT JOIN blazar.computehosts bc ON bca.compute_host_id=bc.id
     LEFT JOIN blazar.computehost_extra_capabilities bce ON bc.id=bce.computehost_id
+    LEFT JOIN keystone.user ku ON bl.user_id=ku.id
+    LEFT JOIN keystone.local_user klu ON ku.id=klu.user_id
     WHERE bl.start_date > CURDATE()
         AND bc.id=bce.computehost_id
         AND bce.capability_name='node_type'
