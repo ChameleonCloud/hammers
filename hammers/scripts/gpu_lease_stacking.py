@@ -94,7 +94,8 @@ class GPUUser:
         """Send email notifying user of leases deleted."""
         email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
         html = _email.render_template(
-            email_body, lease_list=",".join(self.leases_to_delete))
+            email_body,
+            vars={'lease_list': [x[0] for x in self.leases_to_delete])
         subject = "Your GPU lease(s) was deleted."
         _email.send(
             _email.get_host(),
@@ -127,8 +128,13 @@ def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
 
         gpu_users[user_id].add_lease(**row)
 
+    # Check for lease Stacking
+    for gpu_user in gpu_users.values():
+        gpu_user.check_leases_for_stacking()
+
     # Filter out users who are not stacking leases
-    users_in_violation = [v for (k, v) in gpu_users.items() if v.in_violation()]
+    users_in_violation = [
+        v for (k, v) in gpu_users.items() if v.in_violation()]
 
     lease_delete_count = 0
     if not describe:

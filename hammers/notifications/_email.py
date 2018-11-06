@@ -71,7 +71,13 @@ STACKED_LEASE_DELETED_EMAIL_BODY = '''
   deleted due to a violation of our terms of service:
 </p>
 <blockquote>
-  <strong>{{ lease_list_str }}</strong>
+  {% for lease in vars['lease_list'] %}
+  <ul>
+    <li>
+      <strong>{{ lease_list_str }}</strong>
+    <li>
+  </ul>
+  {% endfor %}
 </blockquote>
 <p>
   Please do not make multiple consecutive leases on the same GPU node. If you
@@ -84,7 +90,7 @@ def get_host():
     blazar_config = configparser.ConfigParser()
 
     try:
-        blazar_config.read('/etc')
+        blazar_config.read('/etc/blazar/blazar.conf')
         email_host = blazar_config['physical:host']['email_relay']
     except Exception:
         logging.warn(
