@@ -16,7 +16,7 @@ from datetime import datetime
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
-from hammers.notifications import email
+from hammers.notifications import _email
 
 
 LEASES_ALLOWED = 1
@@ -91,13 +91,13 @@ class GPUUser:
 
     def send_delete_notification(self, sender):
         """Send email notifying user of leases deleted."""
-        email_body = email.get_email_template_by_name(
+        email_body = _email.get_email_template_by_name(
             'stacked_leases_deleted_email_body')
-        html = email.render_template(
+        html = _email.render_template(
             email_body, lease_list=",".join(self.leases_to_delete))
         subject = "Your GPU lease(s) was deleted."
-        email.send(
-            email.get_host(),
+        _email.send(
+            _email.get_host(),
             self.email,
             sender,
             subject,

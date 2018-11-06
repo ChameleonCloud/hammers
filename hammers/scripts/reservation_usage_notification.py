@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from dateutil import tz
 
 from hammers import MySqlArgs, osapi, query
-from hammers.notifications import email
+from hammers.notifications import _email
 
 logging.basicConfig()
 
@@ -89,7 +89,7 @@ def main(argv=None):
     db.version = query.OCATA
 
     auth = osapi.Auth.from_env_or_args(args=args)
-    email_host = email.get_host()
+    email_host = _email.get_host()
 
     # get all future reservations start next day in UTC
     for email_pack in get_reservations_start_next_day(db):
@@ -108,8 +108,8 @@ def main(argv=None):
     # get idle leases
     for email_pack in get_idle_leases(db):
         email_pack['content_vars']['site'] = auth.region
-        html = email.render_template(
-            email.IDLE_RESERVATION_EMAIL_BODY, vars=email_pack['content_vars'])
+        html = _email.render_template(
+            _email.IDLE_RESERVATION_EMAIL_BODY, vars=email_pack['content_vars'])
         subject = 'You have an idle Chameleon lease {}'.format(
             email_pack['content_vars']['leasename'])
         email.send(
