@@ -71,13 +71,11 @@ STACKED_LEASE_DELETED_EMAIL_BODY = '''
   deleted due to a violation of our terms of service:
 </p>
 <blockquote>
-  {% for lease in vars['lease_list'] %}
   <ul>
-    <li>
-      <strong>{{ lease_list_str }}</strong>
-    <li>
-  </ul>
+  {% for lease in vars['lease_list'] %}
+    <li><strong>{{ lease_list_str }}</strong></li>
   {% endfor %}
+  </ul>
 </blockquote>
 <p>
   Please do not make multiple consecutive leases on the same GPU node. If you
