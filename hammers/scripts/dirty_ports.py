@@ -42,14 +42,14 @@ def ports_by_node(ports, assert_single=False):
     return node_ports
 
 
-def identify_dirty_ports(auth):
+def identify_dirty_ports(auth, assert_single):
     '''
     Return list of port data that's shady
 
     Brief race condition hazard if maybe ironic was going to clean it up
     but we mark it as dirty then try to fix it later?
     '''
-    iports = ports_by_node(osrest.ironic.ports(auth), assert_single=True)
+    iports = ports_by_node(osrest.ironic.ports(auth), assert_single)
     nodes = osrest.ironic.nodes(auth)
 
     bad_ports = []
@@ -74,8 +74,8 @@ def clean_ports(db, ports):
     db.db.commit()
 
 
-def cleaner(auth, db, take_action, quiet=True, slack=None):
-    bad_ports = identify_dirty_ports(auth)
+def cleaner(auth, db, take_action, assert_single, quiet=True, slack=None):
+    bad_ports = identify_dirty_ports(auth, assert_single)
 
     print('Bad ports: {}'.format(len(bad_ports)))
     for port in bad_ports:
@@ -132,6 +132,8 @@ def main(argv=None):
         help='Quiet mode. No output to Slack if there was nothing to do.')
     parser.add_argument('--slack', type=str,
         help='JSON file with Slack webhook information to send a notification to')
+    parser.add_argument('--multiport', action='store_true',
+        help='Enable if Ironic nodes may have multiple ports associated.')
     parser.add_argument('action', choices=['info', 'clean'],
         help='Just display info or actually fix them?')
 
@@ -144,6 +146,11 @@ def main(argv=None):
     else:
         slack = None
 
+    if args.multiport:
+        assert_single = False
+    else:
+        assert_single = True
+
     db = mysqlargs.connect()
 
     kwargs = {
@@ -152,6 +159,7 @@ def main(argv=None):
         'take_action': args.action == 'clean',
         'quiet': args.quiet,
         'slack': slack,
+        'assert_single': assert_single,
     }
     if slack:
         with slack: # log exceptions
