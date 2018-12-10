@@ -161,7 +161,7 @@ def image_upload_curl(auth, id, filepath):
     curl -i -X PUT -H "X-Auth-Token: {token}" \
         -H "Content-Type: application/octet-stream" \
         -H "Connection: keep-alive" \
-        --data-binary @"{filepath}" \
+        -T "{filepath}" \
         {url}'''.format(
         token=auth.token,
         filepath=filepath,
