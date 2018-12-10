@@ -62,19 +62,17 @@ def days_past(dt):
     return (datetime.datetime.utcnow() - dt).total_seconds() / (60*60*24)
 
 
-def check_failed_lease_takedown(db, not_down):
-    '''
-    Checks if a lease failed to disassociate a floating
-    ip address when the lease expired, and removes
-    ip address from not_down list.
-    '''
+def check_lease_past_end_date(db, not_down):
+    """
+    Check if a lease has ended for node associated with an active floating ip
+    address and remove ip address from not_down list.
+    """
     ip_ids = tuple([str(x['id']) for x in not_down])
 
     for lease in query.floating_ips_to_leases(db, ip_ids):
 
-        if (lease.pop('action') == 'START' and
-            lease.pop('end_date') < datetime.datetime.utcnow()):
-            
+        if lease.pop('end_date') < datetime.datetime.utcnow():
+
             for idx, ip in enumerate(not_down):
                 if lease.get('ip_id') == str(ip['id']):
                     del not_down[idx]
@@ -138,8 +136,8 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
         # Check if ips were not properly removed from lease
         # that expired.
         if not_down and not kvm and type_=='ip':
-            check_failed_lease_takedown(db, not_down)
-            
+            check_lease_past_end_date(db, not_down)
+
         if not_down:
             raise RuntimeError('error: not all {}s selected are in "DOWN" state'
                 '.\n\n{}'.format(type_, not_down))

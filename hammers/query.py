@@ -120,7 +120,7 @@ def latest_instance_interaction(db, kvm, nova_db_name='nova'):
         table = '{nova_db_name}.instances AS inst INNER JOIN keystone.project AS proj ON inst.project_id = proj.id'.format(nova_db_name=nova_db_name)
         first_col = 'proj.name'
         second_col = 'proj.id'
-        
+
     sql = '''\
     SELECT
         {first_col} AS name,
@@ -153,17 +153,16 @@ def owned_ips(db, project_ids):
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_ids], limit=None)
 
+
 @query
 def floating_ips_to_leases(db, floating_ip_ids):
-    '''Return 'active' leases from a tuple of floating ip ids.'''
+    """Return the leases for a tuple of floating ip ids."""
     floating_ips_varargs = ','.join(['%s'] * len(floating_ip_ids))
 
     sql = '''
     SELECT bl.id AS lease_id
-        , bl.action AS action
         , bl.end_date AS end_date
-        , bl.deleted_at AS deleted_at
-	    , nfi.id AS ip_id
+        , nfi.id AS ip_id
     FROM neutron.floatingips nfi
     LEFT JOIN neutron.ports np ON nfi.fixed_port_id=np.id
     LEFT JOIN nova.instances ni ON np.device_id=ni.uuid
@@ -173,11 +172,39 @@ def floating_ips_to_leases(db, floating_ip_ids):
     LEFT JOIN blazar.reservations br ON bca.reservation_id=br.id
     LEFT JOIN blazar.leases bl ON br.lease_id=bl.id
     WHERE bl.project_id=nfi.project_id
-        AND bl.deleted_at is NULL
         AND nfi.id IN ({floating_ips_varargs});
     '''.format(floating_ips_varargs=floating_ips_varargs)
 
     return db.query(sql, args=floating_ip_ids, limit=None)
+
+@query
+def get_gpu_advanced_reservations(db):
+    """Return all leases on GPUs ordered by node id and lease start date."""
+    sql = '''
+    SELECT klu.name AS user_name
+        , ku.extra AS user_extra
+        , bl.user_id AS user_id
+        , bl.id AS lease_id
+        , bl.start_date AS start_date
+        , bl.end_date AS end_date
+        , bc.hypervisor_hostname AS node_id
+        , bce.capability_value AS gpu
+    FROM blazar.leases bl
+    RIGHT JOIN blazar.reservations br ON bl.id=br.lease_id
+    RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
+    RIGHT JOIN blazar.computehosts bc ON bca.compute_host_id=bc.id
+    LEFT JOIN blazar.computehost_extra_capabilities bce ON bc.id=bce.computehost_id
+    LEFT JOIN keystone.user ku ON bl.user_id=ku.id
+    LEFT JOIN keystone.local_user klu ON ku.id=klu.user_id
+    WHERE bl.start_date > CURDATE()
+        AND bc.id=bce.computehost_id
+        AND bce.capability_name='node_type'
+        AND bce.capability_value LIKE 'gpu_%'
+        AND bl.deleted IS NULL
+    ORDER BY node_id, start_date ASC;
+    '''
+
+    return db.query(sql, limit=None)
 
 @query
 def owned_compute_ip_single(db, project_id):
@@ -192,7 +219,7 @@ def owned_compute_ip_single(db, project_id):
     FROM   neutron.floatingips AS f
     LEFT JOIN  neutron.ports AS p
     ON f.fixed_port_id = p.id
-    WHERE  
+    WHERE
          f.{projcol} = %s
          AND
          ( p.device_owner LIKE 'compute%%' OR p.id is NULL );
@@ -222,7 +249,7 @@ def owned_compute_port_single(db, project_id):
          , status
          , {projcol} AS project_id
     FROM   neutron.ports
-    WHERE  
+    WHERE
          {projcol} = %s
          AND
          device_owner LIKE 'compute%%';
@@ -251,8 +278,8 @@ def active_instances(db):
     Get active instances.
     '''
     sql = '''
-    SELECT DISTINCT uuid, user_id, project_id 
-    FROM nova.instances 
+    SELECT DISTINCT uuid, user_id, project_id
+    FROM nova.instances
     WHERE deleted_at is NULL;
     '''
     return db.query(sql, limit=None)
@@ -260,13 +287,13 @@ def active_instances(db):
 @query
 def orphans(db, orphan_type):
     '''
-    Get orphans of certain type that haven't been deleted,  along with users' and projects' information. 
+    Get orphans of certain type that haven't been deleted,  along with users' and projects' information.
     '''
     db_tables = []
     conditions = '0'
     id_name = 'id'
     if orphan_type == 'lease':
-        db_tables.append('blazar.leases') 
+        db_tables.append('blazar.leases')
         conditions = 'end_date > Now() AND deleted_at is NULL'
     elif orphan_type == 'instance':
         db_tables = [t + '.instances' for t in _LATEST_INSTANCE_DATABASES]
@@ -274,18 +301,18 @@ def orphans(db, orphan_type):
         id_name = 'uuid'
     else:
         raise RuntimeError('Orphan type of {} is not supported'.format(orphan_type))
-    
+
     projcol = project_col(db.version)
     result = []
     for t in db_tables:
         sql = '''
-        SELECT m.id, m.user_id AS user_id, project_id, lu.name AS user_name, p.name AS project_name, u.enabled AS user_enabled, p.enabled AS project_enabled 
+        SELECT m.id, m.user_id AS user_id, project_id, lu.name AS user_name, p.name AS project_name, u.enabled AS user_enabled, p.enabled AS project_enabled
         FROM (
                 SELECT {id_name} AS id, user_id, {projcol} AS project_id
                 FROM {db_table_name}
                 WHERE {conditions}
              ) AS m
-        LEFT JOIN keystone.local_user AS lu ON lu.user_id = m.user_id 
+        LEFT JOIN keystone.local_user AS lu ON lu.user_id = m.user_id
         LEFT JOIN keystone.user AS u ON u.id = m.user_id
         LEFT JOIN keystone.project AS p ON p.id = m.project_id
         WHERE m.user_id IS NULL
@@ -301,10 +328,10 @@ def orphans(db, orphan_type):
                AND a.actor_id = m.user_id
                AND a.target_id = m.project_id
             )
-        ) 
+        )
         '''.format(id_name=id_name, projcol=projcol, db_table_name=t, conditions=conditions)
         result += db.query(sql, limit=None)
-    
+
     return result
 
 @query
@@ -375,15 +402,15 @@ def update_orphan_resource_providers(db):
 def get_advance_reservations(db):
     """Get all advance reservations created by any user"""
     sql = '''\
-    SELECT lu.name AS user_name, u.extra AS user_extra, l.name AS lease_name, l.id AS lease_id, p.name AS project_name, l.start_date AS start_date 
+    SELECT lu.name AS user_name, u.extra AS user_extra, l.name AS lease_name, l.id AS lease_id, p.name AS project_name, l.start_date AS start_date
     FROM blazar.leases AS l
-    JOIN keystone.user AS u ON l.user_id = u.id 
-    JOIN keystone.local_user AS lu ON u.id = lu.user_id 
-    JOIN keystone.project AS p ON l.project_id = p.id 
+    JOIN keystone.user AS u ON l.user_id = u.id
+    JOIN keystone.local_user AS lu ON u.id = lu.user_id
+    JOIN keystone.project AS p ON l.project_id = p.id
     WHERE l.start_date > UTC_TIMESTAMP()
         AND l.deleted_at IS NULL
     '''
-    
+
     return db.query(sql, limit=None)
 
 @query
@@ -400,9 +427,9 @@ def get_idle_leases(db, hours):
         JOIN blazar.reservations AS r ON l.id = r.lease_id
         JOIN blazar.computehost_allocations AS ca ON ca.reservation_id = r.id
         JOIN blazar.computehosts ch ON ca.compute_host_id = ch.id
-        LEFT JOIN nova.instances AS i ON i.node = ch.hypervisor_hostname 
-                                     AND l.user_id = i.user_id 
-                                     AND l.project_id = i.project_id 
+        LEFT JOIN nova.instances AS i ON i.node = ch.hypervisor_hostname
+                                     AND l.user_id = i.user_id
+                                     AND l.project_id = i.project_id
         WHERE l.deleted_at IS NULL
           AND l.start_date < UTC_TIMESTAMP()
           AND l.end_date > UTC_TIMESTAMP()
@@ -416,11 +443,11 @@ def get_idle_leases(db, hours):
                 AND TIMESTAMPDIFF(HOUR, MAX(i.updated_at), UTC_TIMESTAMP()) >= %s
                )
     ) AS s
-    JOIN keystone.user AS u ON s.user_id = u.id 
-    JOIN keystone.local_user AS lu ON u.id = lu.user_id 
-    JOIN keystone.project AS p ON s.project_id = p.id 
+    JOIN keystone.user AS u ON s.user_id = u.id
+    JOIN keystone.local_user AS lu ON u.id = lu.user_id
+    JOIN keystone.project AS p ON s.project_id = p.id
     '''
-    
+
     return db.query(sql, (hours, hours, hours), limit=None)
 
 def main(argv):
