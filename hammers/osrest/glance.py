@@ -160,6 +160,7 @@ def image_upload_curl(auth, id, filepath):
     return textwrap.dedent('''\
     curl -i -X PUT -H "X-Auth-Token: {token}" \
         -H "Content-Type: application/octet-stream" \
+        -H "Connection: keep-alive" \
         --data-binary @"{filepath}" \
         {url}'''.format(
         token=auth.token,
@@ -178,6 +179,7 @@ def image_download_curl(auth, id, filepath=None):
 
     return textwrap.dedent('''\
     curl -D /dev/stdout -X GET -H "X-Auth-Token: {token}" \
+        -H "Connection: keep-alive" \
         {url} \
         -o {filepath}'''.format(
         token=auth.token,
