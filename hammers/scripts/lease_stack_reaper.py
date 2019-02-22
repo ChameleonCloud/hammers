@@ -40,7 +40,7 @@ class User:
 
         # Data is by node id so do not add lease if it has already
         # appeared for another node (i.e. multi-node leases).
-        if lease_id not in self.node[node_type]:
+        if lease_id not in self.nodes[node_type]:
             self.nodes[node_type].append((lease_id, start_date, end_date))
 
     def sort_leases_by_date(self):
@@ -88,10 +88,14 @@ class User:
 
     def print_info(self, leases):
         """Return dict of info for console output."""
+        for n, l in self.nodes.items():
+            if leases in l:
+                node_type = n
         return {
             'user_name': self.name,
             'user_email': self.email,
-            'leases': leases}
+            'leases': leases,
+            'node_type': node_type}
 
 
 def send_delete_notification(gpu_user, leases, sender):
@@ -111,7 +115,7 @@ def send_delete_notification(gpu_user, leases, sender):
         html.encode("utf8"))
 
 
-def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
+def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
     """Delete stacked leases on gpu nodes."""
     users = {}
 
@@ -145,7 +149,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='GPU Lease Stacking Reaper')
+    parser = argparse.ArgumentParser(description='Lease Stack Reaper')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -175,7 +179,7 @@ def main(argv=None):
     auth = osapi.Auth.from_env_or_args(args=args)
 
     if args.slack:
-        slack = Slackbot(args.slack, script_name='gpu_lease_stacking')
+        slack = Slackbot(args.slack, script_name='lease_stack_reaper')
     else:
         slack = None
 
@@ -192,9 +196,9 @@ def main(argv=None):
 
     if slack:
         with slack:
-            remove_count = gpu_stack_reaper(**kwargs)
+            remove_count = lease_stack_reaper(**kwargs)
     else:
-        remove_count = gpu_stack_reaper(**kwargs)
+        remove_count = lease_stack_reaper(**kwargs)
 
     if slack and (args.action == 'delete') and (
             (not args.quiet) or remove_count):
@@ -207,9 +211,9 @@ def main(argv=None):
             )
             color = '#000000'
         else:
-            message = ('No leases on gpu nodes to delete.')
+            message = ('No leases to delete.')
             color = '#cccccc'
-        slack.post('gpu-lease-stacking', message, color=color)
+        slack.post('lease-stack-reaper', message, color=color)
 
 
 if __name__ == '__main__':
