@@ -178,7 +178,7 @@ def floating_ips_to_leases(db, floating_ip_ids):
     return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
-def get_gpu_advanced_reservations(db):
+def get_advanced_reservations(db):
     """Return all leases on GPUs ordered by node id and lease start date."""
     sql = '''
     SELECT klu.name AS user_name
@@ -187,8 +187,7 @@ def get_gpu_advanced_reservations(db):
         , bl.id AS lease_id
         , bl.start_date AS start_date
         , bl.end_date AS end_date
-        , bc.hypervisor_hostname AS node_id
-        , bce.capability_value AS gpu
+        , bce.capability_value AS node_type
     FROM blazar.leases bl
     RIGHT JOIN blazar.reservations br ON bl.id=br.lease_id
     RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
@@ -199,9 +198,15 @@ def get_gpu_advanced_reservations(db):
     WHERE bl.start_date > CURDATE()
         AND bc.id=bce.computehost_id
         AND bce.capability_name='node_type'
-        AND bce.capability_value LIKE 'gpu_%'
+        AND (bce.capability_value LIKE 'gpu%'
+            OR bce.capability_value LIKE 'compute%'
+            OR bce.capability_value LIKE 'storage%'
+            OR bce.capability_value LIKE 'lowpower%'
+            OR bce.capability_value LIKE 'fpga'
+            OR bce.capability_value LIKE 'arm64'
+            OR bce.capability_value LIKE 'atom')
         AND bl.deleted IS NULL
-    ORDER BY node_id, start_date ASC;
+    ORDER BY node_type, start_date ASC;
     '''
 
     return db.query(sql, limit=None)
