@@ -21,6 +21,7 @@ from hammers.notifications import _email
 
 
 LEASES_ALLOWED = 1
+MIN_ALLOWED_STACK_INTERVAL_DAYS = 2
 
 
 class User:
@@ -36,18 +37,14 @@ class User:
     def add_lease(self, node_type, lease_id, start_date, end_date, **kwargs):
         """Add lease to node list."""
         if node_type not in self.nodes:
-            self.nodes[node_type] = []
+            self.nodes[node_type] = set()
 
-        # Data is by node id so do not add lease if it has already
-        # appeared for another node (i.e. multi-node leases).
-        if lease_id not in self.nodes[node_type]:
-            self.nodes[node_type].append((lease_id, start_date, end_date))
+        self.nodes[node_type].add((lease_id, start_date, end_date))
 
     def sort_leases_by_date(self):
         """Sort leases by date for each node."""
         for node_type, leases in self.nodes.items():
-            self.nodes[node_type] = list(sorted(
-                set(leases), key=lambda x: x[1]))
+            self.nodes[node_type] = list(sorted(leases, key=lambda x: x[1]))
 
     def leases_in_violation(self):
         """Check for lease stacking and add lease to delete list."""
@@ -78,8 +75,12 @@ class User:
             else:
                 next_start_date = datetime.max
 
-            stacked_previous = (start_date - last_end_date).days < 2
-            stacked_next = (next_start_date - end_date).days < 2
+            stacked_previous = (
+                (start_date - last_end_date).days
+                < MIN_ALLOWED_STACK_INTERVAL_DAYS)
+            stacked_next = (
+                (next_start_date - end_date).days
+                < MIN_ALLOWED_STACK_INTERVAL_DAYS)
 
             if stacked_previous or stacked_next:
                 stacked.append(leases[i])
@@ -88,9 +89,6 @@ class User:
 
     def print_info(self, leases):
         """Return dict of info for console output."""
-        for n, l in self.nodes.items():
-            if leases in l:
-                node_type = n
         return {
             'user_name': self.name,
             'user_email': self.email,
