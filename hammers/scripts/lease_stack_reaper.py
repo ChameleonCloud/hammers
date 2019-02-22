@@ -2,7 +2,7 @@
 '''
 .. code-block:: bash
 
-    gpu-lease-stacking {info, delete}
+    lease-stack-reaper {info, delete}
 
 Reclaims GPU nodes from leases that violate terms of use.
 
@@ -21,9 +21,10 @@ from hammers.notifications import _email
 
 
 LEASES_ALLOWED = 1
+MIN_ALLOWED_STACK_INTERVAL_DAYS = 2
 
 
-class GPUUser:
+class User:
     """Class for user with advanced reservation on gpu nodes."""
 
     def __init__(self, user_id, name, email):
@@ -33,25 +34,24 @@ class GPUUser:
         self.email = email
         self.nodes = {}
 
-    def add_lease(self, node_id, lease_id, start_date, end_date, **kwargs):
+    def add_lease(self, node_type, lease_id, start_date, end_date, **kwargs):
         """Add lease to node list."""
-        if node_id not in self.nodes:
-            self.nodes[node_id] = []
+        if node_type not in self.nodes:
+            self.nodes[node_type] = set()
 
-        self.nodes[node_id].append((lease_id, start_date, end_date))
+        self.nodes[node_type].add((lease_id, start_date, end_date))
 
     def sort_leases_by_date(self):
         """Sort leases by date for each node."""
-        for node_id, leases in self.nodes.items():
-            self.nodes[node_id] = list(sorted(
-                set(leases), key=lambda x: x[1]))
+        for node_type, leases in self.nodes.items():
+            self.nodes[node_type] = list(sorted(leases, key=lambda x: x[1]))
 
     def leases_in_violation(self):
         """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
         leases_to_delete = []
 
-        for node_id, leases in self.nodes.items():
+        for node_type, leases in self.nodes.items():
             stacked_leases = self.find_stacked_leases(leases)
             leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
 
@@ -75,8 +75,12 @@ class GPUUser:
             else:
                 next_start_date = datetime.max
 
-            stacked_previous = (start_date - last_end_date).days < 1
-            stacked_next = (next_start_date - end_date).days < 1
+            stacked_previous = (
+                (start_date - last_end_date).days
+                < MIN_ALLOWED_STACK_INTERVAL_DAYS)
+            stacked_next = (
+                (next_start_date - end_date).days
+                < MIN_ALLOWED_STACK_INTERVAL_DAYS)
 
             if stacked_previous or stacked_next:
                 stacked.append(leases[i])
@@ -108,40 +112,41 @@ def send_delete_notification(gpu_user, leases, sender):
         html.encode("utf8"))
 
 
-def gpu_stack_reaper(db, auth, sender, describe=False, quiet=False):
+def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
     """Delete stacked leases on gpu nodes."""
-    gpu_users = {}
+    users = {}
 
-    for row in query.get_gpu_advanced_reservations(db):
+    for row in query.get_advanced_reservations(db):
         user_id = row['user_id']
 
-        if user_id not in gpu_users.keys():
-            gpu_users[user_id] = GPUUser(
+        if user_id not in users.keys():
+            users[user_id] = User(
                 user_id=user_id,
                 name=row['user_name'],
                 email=json.loads(row['user_extra'])['email'])
 
-        gpu_users[user_id].add_lease(**row)
+        users[user_id].add_lease(**row)
 
     lease_delete_count = 0
-    for gpu_user in gpu_users.values():
-        leases_in_violation = gpu_user.leases_in_violation()
+    for user in users.values():
+        leases_in_violation = user.leases_in_violation()
 
         if leases_in_violation:
             if not describe:
                 lease_delete_count += len(leases_in_violation)
                 [lease_delete(auth, x[0]) for x in leases_in_violation]
-                send_delete_notification(gpu_user, leases_in_violation, sender)
+                send_delete_notification(user, leases_in_violation, sender)
             else:
-                pprint(gpu_user.print_info(leases_in_violation))
+                pprint(user.print_info(leases_in_violation))
 
     return lease_delete_count
+
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='GPU Lease Stacking Reaper')
+    parser = argparse.ArgumentParser(description='Lease Stack Reaper')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -171,7 +176,7 @@ def main(argv=None):
     auth = osapi.Auth.from_env_or_args(args=args)
 
     if args.slack:
-        slack = Slackbot(args.slack, script_name='gpu_lease_stacking')
+        slack = Slackbot(args.slack, script_name='lease_stack_reaper')
     else:
         slack = None
 
@@ -188,23 +193,25 @@ def main(argv=None):
 
     if slack:
         with slack:
-            remove_count = gpu_stack_reaper(**kwargs)
+            remove_count = lease_stack_reaper(**kwargs)
     else:
-        remove_count = gpu_stack_reaper(**kwargs)
+        remove_count = lease_stack_reaper(**kwargs)
 
     if slack and (args.action == 'delete') and (
             (not args.quiet) or remove_count):
 
         if remove_count > 0:
             message = (
-                'Commanded deletion of *{} leases* (GPU stacking restriction violated)'
+                'Commanded deletion of *{} leases* '
+                '(Lease stacking restriction violated)'
                 .format(remove_count)
             )
             color = '#000000'
         else:
-            message = ('No leases on gpu nodes to delete.')
+            message = ('No leases to delete.')
             color = '#cccccc'
-        slack.post('gpu-lease-stacking', message, color=color)
+        slack.post('lease-stack-reaper', message, color=color)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

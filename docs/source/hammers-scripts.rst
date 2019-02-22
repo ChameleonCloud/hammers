@@ -174,7 +174,7 @@ is already done.
       minute => 40,
     }
     cron { 'hammers-gpuleasestacking':
-      command => "$venv bin/gpu-lease-stacking delete --slack $slack_json_loc 2>&1 | /usr/bin/logger -t hammers-gpuleasestacking",
+      command => "$venv_bin/lease-stack-reaper delete --slack $slack_json_loc 2>&1 | /usr/bin/logger -t hammers-leasestacking",
       user => 'root',
       hour => 5,
       minute => 40,

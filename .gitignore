@@ -72,3 +72,4 @@ Untitled*.ipynb
 *.json
 *.ini
 *.cnf
+venv/
