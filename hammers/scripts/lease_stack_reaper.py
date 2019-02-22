@@ -92,8 +92,7 @@ class User:
         return {
             'user_name': self.name,
             'user_email': self.email,
-            'leases': leases,
-            'node_type': node_type}
+            'leases': leases}
 
 
 def send_delete_notification(gpu_user, leases, sender):
