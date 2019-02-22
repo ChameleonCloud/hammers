@@ -78,8 +78,12 @@ STACKED_LEASE_DELETED_EMAIL_BODY = '''
   </ul>
 </blockquote>
 <p>
-  Please do not make multiple consecutive leases on the same GPU node. If you
-  require a lease for longer than 1 week then please submit a formal request.
+  Please do not make multiple consecutive leases on the same node or across
+  the same node types. If you require a lease for longer than 1 week then
+  please submit a formal request. Likewise, you can also always extend a lease
+  within 48 hours of its end date provided that it has not been reserved by
+  another user. This mechanism is intended to strike a balance between
+  convenience and fairness between all our users.
 </p>
 '''
 

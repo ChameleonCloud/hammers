@@ -78,8 +78,8 @@ class User:
             else:
                 next_start_date = datetime.max
 
-            stacked_previous = (start_date - last_end_date).days < 1
-            stacked_next = (next_start_date - end_date).days < 1
+            stacked_previous = (start_date - last_end_date).days < 2
+            stacked_next = (next_start_date - end_date).days < 2
 
             if stacked_previous or stacked_next:
                 stacked.append(leases[i])
