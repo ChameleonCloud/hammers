@@ -85,7 +85,7 @@ class User:
             if stacked_previous or stacked_next:
                 stacked.append(leases[i])
 
-        return stacked
+        return [x for x in stacked if (x[2] - x[1]).days > 1]
 
     def print_info(self, leases):
         """Return dict of info for console output."""
