@@ -55,10 +55,10 @@ class User:
         for node_type, leases in self.nodes.items():
             if 'gpu_' in node_type:
                 gpu_day_violation = self.find_gpu_days_limit_leases(leases)
-                leases_to_delete.add(gpu_day_violation)
+                leases_to_delete.update(gpu_day_violation)
 
             stacked_leases = self.find_stacked_leases(leases)
-            leases_to_delete.add(stacked_leases[LEASES_ALLOWED:])
+            leases_to_delete.update(stacked_leases[LEASES_ALLOWED:])
 
         return list(leases_to_delete)
 

@@ -403,6 +403,22 @@ def update_orphan_resource_providers(db):
     '''
     return db.query(sql, no_rows=True)
 
+
+@query
+def get_nodes_by_lease(db, lease_id):
+    """Get node ids of hosts in a lease."""
+    sql = '''\
+    SELECT ch.hypervisor_hostname AS node_id
+    FROM blazar.leases AS l
+    JOIN blazar.reservations AS r ON l.id = r.lease_id
+    JOIN blazar.computehost_allocations AS ca ON ca.reservation_id = r.id
+    JOIN blazar.computehosts AS ch AS ca.compute_host_id = ch.id
+    WHERE l.lease_id = '4607d161-8610-4c10-8849-4d5fab530a7b';
+    '''
+
+    return db.query(db, lease_id)
+
+
 @query
 def get_advance_reservations(db):
     """Get all advance reservations created by any user"""
@@ -417,6 +433,7 @@ def get_advance_reservations(db):
     '''
 
     return db.query(sql, limit=None)
+
 
 @query
 def get_idle_leases(db, hours):
