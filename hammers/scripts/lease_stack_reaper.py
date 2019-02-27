@@ -70,7 +70,7 @@ class User:
 
         for i in range(len(leases)):
 
-            _, start_date, end_date = leases[i]
+            lease_id, start_date, end_date = leases[i]
 
             lease_days = (end_date - start_date).days
             node_count = len(list(query.get_nodes_by_lease(db, lease_id)))
