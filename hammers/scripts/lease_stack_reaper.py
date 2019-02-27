@@ -22,6 +22,7 @@ from hammers.notifications import _email
 
 LEASES_ALLOWED = 1
 MIN_ALLOWED_STACK_INTERVAL_DAYS = 2
+MAX_GPU_DAYS_PER_USER = 32
 
 
 class User:
@@ -49,13 +50,34 @@ class User:
     def leases_in_violation(self):
         """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
-        leases_to_delete = []
+        leases_to_delete = set()
 
         for node_type, leases in self.nodes.items():
-            stacked_leases = self.find_stacked_leases(leases)
-            leases_to_delete.extend(stacked_leases[LEASES_ALLOWED:])
+            if 'gpu_' in node_type:
+                gpu_day_violation = self.find_gpu_days_limit_leases(leases)
+                leases_to_delete.add(gpu_day_violation)
 
-        return leases_to_delete
+            stacked_leases = self.find_stacked_leases(leases)
+            leases_to_delete.add(stacked_leases[LEASES_ALLOWED:])
+
+        return list(leases_to_delete)
+
+    def find_gpu_days_limit_leases(self, leases):
+        """Return list of leases in violation of gpu days limit."""
+        user_gpu_days = 0
+        in_violation = []
+
+        for i in range(len(leases)):
+
+            _, start_date, end_date = leases[i]
+
+            lease_days = (end_date - start_date).days
+            user_gpu_days += lease_days
+
+            if user_gpu_days > MAX_GPU_DAYS_PER_USER:
+                in_violation.extend(leases[i])
+
+        return in_violation
 
     def find_stacked_leases(self, leases):
         """Return list of only the leases stacked on each other."""
