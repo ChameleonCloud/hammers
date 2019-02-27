@@ -412,11 +412,11 @@ def get_nodes_by_lease(db, lease_id):
     FROM blazar.leases AS l
     JOIN blazar.reservations AS r ON l.id = r.lease_id
     JOIN blazar.computehost_allocations AS ca ON ca.reservation_id = r.id
-    JOIN blazar.computehosts AS ch AS ca.compute_host_id = ch.id
-    WHERE l.lease_id = '4607d161-8610-4c10-8849-4d5fab530a7b';
+    JOIN blazar.computehosts AS ch ON ca.compute_host_id = ch.id
+    WHERE l.id = %s
     '''
 
-    return db.query(db, lease_id)
+    return db.query(sql, (lease_id,), limit=None)
 
 
 @query

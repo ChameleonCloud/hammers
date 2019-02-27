@@ -47,14 +47,15 @@ class User:
         for node_type, leases in self.nodes.items():
             self.nodes[node_type] = list(sorted(leases, key=lambda x: x[1]))
 
-    def leases_in_violation(self):
+    def leases_in_violation(self, db):
         """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
         leases_to_delete = set()
 
         for node_type, leases in self.nodes.items():
             if 'gpu_' in node_type:
-                gpu_day_violation = self.find_gpu_days_limit_leases(leases)
+                gpu_day_violation = self.find_gpu_days_limit_leases(
+                    db, leases)
                 leases_to_delete.update(gpu_day_violation)
 
             stacked_leases = self.find_stacked_leases(leases)
@@ -62,7 +63,7 @@ class User:
 
         return list(leases_to_delete)
 
-    def find_gpu_days_limit_leases(self, leases):
+    def find_gpu_days_limit_leases(self, db, leases):
         """Return list of leases in violation of gpu days limit."""
         user_gpu_days = 0
         in_violation = []
@@ -72,10 +73,11 @@ class User:
             _, start_date, end_date = leases[i]
 
             lease_days = (end_date - start_date).days
-            user_gpu_days += lease_days
+            node_count = len(list(query.get_nodes_by_lease(db, lease_id)))
+            user_gpu_days += lease_days * node_count
 
             if user_gpu_days > MAX_GPU_DAYS_PER_USER:
-                in_violation.extend(leases[i])
+                in_violation.append(leases[i])
 
         return in_violation
 
@@ -151,7 +153,7 @@ def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
 
     lease_delete_count = 0
     for user in users.values():
-        leases_in_violation = user.leases_in_violation()
+        leases_in_violation = user.leases_in_violation(db)
 
         if leases_in_violation:
             if not describe:
