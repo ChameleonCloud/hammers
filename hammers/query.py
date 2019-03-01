@@ -423,13 +423,20 @@ def get_nodes_by_lease(db, lease_id):
 def get_advance_reservations(db):
     """Get all advance reservations created by any user"""
     sql = '''\
-    SELECT lu.name AS user_name, u.extra AS user_extra, l.name AS lease_name, l.id AS lease_id, p.name AS project_name, l.start_date AS start_date
+    SELECT lu.name AS user_name
+        , u.extra AS user_extra
+        , l.name AS lease_name
+        , l.id AS lease_id
+        , p.name AS project_name
+        , l.start_date AS start_date
     FROM blazar.leases AS l
     JOIN keystone.user AS u ON l.user_id = u.id
     JOIN keystone.local_user AS lu ON u.id = lu.user_id
     JOIN keystone.project AS p ON l.project_id = p.id
     WHERE l.start_date > UTC_TIMESTAMP()
         AND l.deleted_at IS NULL
+        AND p.name NOT LIKE "Chameleon%"
+        AND p.name NOT LIKE "maintenance"
     '''
 
     return db.query(sql, limit=None)
