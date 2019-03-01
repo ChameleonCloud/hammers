@@ -178,12 +178,13 @@ def floating_ips_to_leases(db, floating_ip_ids):
     return db.query(sql, args=floating_ip_ids, limit=None)
 
 @query
-def get_advanced_reservations(db):
+def get_advanced_reservations_by_node_type(db):
     """Return all leases on GPUs ordered by node id and lease start date."""
     sql = '''
     SELECT klu.name AS user_name
         , ku.extra AS user_extra
         , bl.user_id AS user_id
+        , bl.project_id AS project_id
         , bl.id AS lease_id
         , bl.start_date AS start_date
         , bl.end_date AS end_date
@@ -403,11 +404,32 @@ def update_orphan_resource_providers(db):
     '''
     return db.query(sql, no_rows=True)
 
+
+@query
+def get_nodes_by_lease(db, lease_id):
+    """Get node ids of hosts in a lease."""
+    sql = '''\
+    SELECT ch.hypervisor_hostname AS node_id
+    FROM blazar.leases AS l
+    JOIN blazar.reservations AS r ON l.id = r.lease_id
+    JOIN blazar.computehost_allocations AS ca ON ca.reservation_id = r.id
+    JOIN blazar.computehosts AS ch ON ca.compute_host_id = ch.id
+    WHERE l.id = %s
+    '''
+
+    return db.query(sql, (lease_id,), limit=None)
+
+
 @query
 def get_advance_reservations(db):
     """Get all advance reservations created by any user"""
     sql = '''\
-    SELECT lu.name AS user_name, u.extra AS user_extra, l.name AS lease_name, l.id AS lease_id, p.name AS project_name, l.start_date AS start_date
+    SELECT lu.name AS user_name
+        , u.extra AS user_extra
+        , l.name AS lease_name
+        , l.id AS lease_id
+        , p.name AS project_name
+        , l.start_date AS start_date
     FROM blazar.leases AS l
     JOIN keystone.user AS u ON l.user_id = u.id
     JOIN keystone.local_user AS lu ON u.id = lu.user_id
@@ -417,6 +439,7 @@ def get_advance_reservations(db):
     '''
 
     return db.query(sql, limit=None)
+
 
 @query
 def get_idle_leases(db, hours):
