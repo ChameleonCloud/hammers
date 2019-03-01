@@ -143,7 +143,7 @@ def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
     """Delete stacked leases on gpu nodes."""
     users = {}
 
-    for row in query.get_advanced_reservations(db):
+    for row in query.get_advanced_reservations_by_node_type(db):
         user_id = row['user_id']
 
         if row['project_id'] in EXCLUDED_PROJECT_IDS:
