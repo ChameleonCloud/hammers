@@ -23,6 +23,9 @@ from hammers.notifications import _email
 LEASES_ALLOWED = 1
 MIN_ALLOWED_STACK_INTERVAL_DAYS = 2
 MAX_GPU_DAYS_PER_USER = 32
+EXCLUDED_PROJECT_IDS = [
+    '975c0a94b784483a885f4503f70af655',
+    '4ffe61cf850d4b45aef86b46411d33e1']
 
 
 class User:
@@ -61,7 +64,7 @@ class User:
             stacked_leases = self.find_stacked_leases(leases)
             leases_to_delete.update(stacked_leases[LEASES_ALLOWED:])
 
-        return list(leases_to_delete)
+        return leases_to_delete
 
     def find_gpu_days_limit_leases(self, db, leases):
         """Return list of leases in violation of gpu days limit."""
@@ -142,6 +145,9 @@ def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
 
     for row in query.get_advanced_reservations(db):
         user_id = row['user_id']
+
+        if row['project_id'] in EXCLUDED_PROJECT_IDS:
+            continue
 
         if user_id not in users.keys():
             users[user_id] = User(

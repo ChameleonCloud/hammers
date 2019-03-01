@@ -428,6 +428,7 @@ def get_advance_reservations(db):
         , l.name AS lease_name
         , l.id AS lease_id
         , p.name AS project_name
+        , p.id AS project_id
         , l.start_date AS start_date
     FROM blazar.leases AS l
     JOIN keystone.user AS u ON l.user_id = u.id
@@ -435,8 +436,6 @@ def get_advance_reservations(db):
     JOIN keystone.project AS p ON l.project_id = p.id
     WHERE l.start_date > UTC_TIMESTAMP()
         AND l.deleted_at IS NULL
-        AND p.name NOT LIKE "Chameleon%"
-        AND p.name NOT LIKE "maintenance"
     '''
 
     return db.query(sql, limit=None)
