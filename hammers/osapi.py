@@ -82,7 +82,7 @@ class Auth(object):
     required_os_vars = {
         'OS_USERNAME',
         'OS_PASSWORD',
-        'OS_TENANT_NAME',
+        'OS_PROJECT_ID',
         'OS_AUTH_URL',
     }
 
@@ -113,61 +113,47 @@ class Auth(object):
         missing_vars = self.required_os_vars - set(rc)
         if missing_vars:
             raise RuntimeError('Missing required OS values: {}'.format(missing_vars))
-        self._find_keystone2_root()
+        self.auth_url = self.rc['OS_AUTH_URL']
         self.region = self.rc.get('OS_REGION_NAME', None)
         self.authenticate()
-
-    def _find_keystone2_root(self):
-        '''Sometimes the OS_AUTH_URL is missing the v2.0 suffix for some
-        reason. Hopefully asking the root endpoint will always tell us
-        where it really is.
-        '''
-        response = requests.get(self.rc['OS_AUTH_URL'])
-        data = response.json()
-
-        if 'version' in data:
-            data['versions'] = {'values': [data['version']]}
-        for version in data['versions']['values']:
-            if version['id'] != 'v2.0':
-                continue
-            for link in version['links']:
-                if link.get('rel') == 'self':
-                    self._keystone2_root = link['href']
-                    return
-            else:
-                raise RuntimeError('could not find self-link among v2 data: {}'.format(data))
-        else:
-            raise RuntimeError('could not find Keystone v2 root')
 
     def authenticate(self):
         """
         Authenticate with Keystone to get a token and endpoint listing
         """
-        response = requests.post(self._keystone2_root + '/tokens', json={
-        'auth': {
-            'passwordCredentials': {
-                'username': self.rc['OS_USERNAME'],
-                'password': self.rc['OS_PASSWORD'],
-            },
-            'tenantName': self.rc['OS_TENANT_NAME']
-        }})
-        if response.status_code != 200:
+        response = requests.post(self.auth_url + '/auth/tokens', json={
+            "auth": {
+                "identity": {
+                    "methods": [
+                        "password"
+                    ],
+                    "password": {
+                        "user": {
+                            "domain": {
+                                "id": "default"
+                            },
+                            "name": self.rc['OS_USERNAME'],
+                            "password": self.rc['OS_PASSWORD']
+                        }
+                    }
+                },
+                "scope": {
+                    "project": {
+                        "id": self.rc['OS_PROJECT_ID']
+                    }
+                }
+            }
+        })
+        if response.status_code != 201:
             raise RuntimeError(
                 'HTTP {}: {}'
                 .format(response.status_code, response.content[:400])
             )
 
-        jresponse = response.json()
-        try:
-            self.access = jresponse['access']
-        except KeyError:
-            raise RuntimeError(
-                'expected "access" key not present in response '
-                '(found keys: {})'.format(list(jresponse))
-            )
-
-        self._token = self.access['token']['id']
-        self.expiry = dateparse(self.access['token']['expires'])
+        json = response.json()
+        self._token = response.headers['x-subject-token']
+        self.service_catalog = json['token']['catalog']
+        self.expiry = dateparse(json['token']['expires_at'])
 
         self._L.debug('New token "{}" expires in {:.2f} minutes'.format(
             self._token,
@@ -194,7 +180,7 @@ class Auth(object):
         services = [
             service
             for service
-            in self.access['serviceCatalog']
+            in self.service_catalog
             if service['type'] == type
         ]
         if len(services) < 1:
@@ -202,17 +188,12 @@ class Auth(object):
         elif len(services) > 1:
             raise RuntimeError("found multiple services matching type '{}'".format(type))
         service = services[0]
-        endpoints = service['endpoints']
+        endpoint = [
+            e for e in service['endpoints']
+            if e['interface'] == 'public' and e['region'] == self.region
+        ][0]
 
-        if self.region:
-            for endpoint in endpoints:
-                if endpoint['region'] == self.region:
-                    # leak endpoint out of the loop
-                    break
-            else:
-                raise RuntimeError("didn't find any endpoints for region '{}'".format(self.region))
-        else:
-            # pick arbitrary region if none provided.
-            endpoint = endpoints[0]
+        if not endpoint:
+            raise RuntimeError("didn't find endpoint for service")
 
-        return endpoint['publicURL']
+        return endpoint['url']
