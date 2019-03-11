@@ -177,11 +177,12 @@ class Auth(object):
         Find the endpoint for a given service *type*. Examples include ``compute`` for Nova,
         ``reservation`` for Blazar, or ``image`` for Glance.
         """
+        # add filter service['endpoints'] is not empty, because kvm site contains artifacts from older version.
         services = [
             service
             for service
             in self.service_catalog
-            if service['type'] == type
+            if service['type'] == type and len(service['endpoints']) > 0
         ]
         if len(services) < 1:
             raise RuntimeError("didn't find any services matching type '{}'".format(type))
