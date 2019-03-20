@@ -58,6 +58,8 @@ def identify_dirty_ports(auth, assert_single):
         if nodes[nid]['provision_state'] != 'available':
             continue
 
+        if nid not in iports:
+            continue
         port = iports[nid][0]
         if not port['internal_info']:
             continue

@@ -114,6 +114,10 @@ class Auth(object):
         if missing_vars:
             raise RuntimeError('Missing required OS values: {}'.format(missing_vars))
         self.auth_url = self.rc['OS_AUTH_URL']
+
+        if self.auth_url[-2:] != 'v3':
+             self.auth_url += '/v3'
+
         self.region = self.rc.get('OS_REGION_NAME', None)
         self.authenticate()
 
@@ -144,6 +148,7 @@ class Auth(object):
                 }
             }
         })
+
         if response.status_code != 201:
             raise RuntimeError(
                 'HTTP {}: {}'
