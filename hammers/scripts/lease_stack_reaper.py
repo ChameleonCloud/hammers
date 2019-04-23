@@ -173,6 +173,7 @@ def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
     return lease_delete_count
 
 
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

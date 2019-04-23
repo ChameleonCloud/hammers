@@ -3,6 +3,40 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import contextlib
 import functools
+from prometheus_client import Gauge, CollectorRegistry, pushadd_to_gateway
+from subprocess import Popen, PIPE, check_output
+from time import time
+
+
+def push_last_success_time(hammer_filename):
+    """Pushes last time hammer succeeded to prometheus pushgateway."""
+    metric_name = 'cron_last_success'
+    job_name = 'hammer_{}'.format(
+        hammer_filename.split('/')[-1].replace('.py', ''))
+
+    registry = CollectorRegistry()
+    last_success = Gauge(
+        metric_name, 'Unixtime hammer last succeeded', registry=registry)
+    last_success.set_to_current_time()
+
+    pushadd_to_gateway('0.0.0.0:9091', job=job_name, registry=registry)
+
+
+def prometheus_exporter(hammer_filename):
+    """
+    Wrapper function for hammers to export boolean value for if hammer ran
+    successful to prometheus monitoring.
+    """
+    def wrap(f):
+        def with_pushgateway(*args, **kwargs):
+            try:
+                _f = f(*args, **kwargs)
+                push_last_success_time(hammer_filename)
+                return _f
+            except Exception:
+                return f(*args, **kwargs)
+        return with_pushgateway
+    return wrap
 
 
 def error_message_factory(subcommand):

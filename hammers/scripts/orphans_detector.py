@@ -2,7 +2,7 @@
 '''
 .. code-block:: bash
 
-    orphans_detector 
+    orphans_detector
 
 Detects orphan leases and instances.
 
@@ -21,6 +21,7 @@ import os
 
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
+from hammers.util import prometheus_exporter
 
 from keystoneauth1.identity import v2
 from keystoneauth1 import session
@@ -34,7 +35,7 @@ def get_orphan_info_from_query(query_result):
         user_enabled = obj['user_enabled'] == 1
         project_enabled = obj['project_enabled'] == 1
         if user_enabled and project_enabled:
-            orphans[orphan_id] = 'User {} does not belongs to Project {} anymore'.format(obj['user_name'], obj['project_name']) 
+            orphans[orphan_id] = 'User {} does not belongs to Project {} anymore'.format(obj['user_name'], obj['project_name'])
         else:
             message = []
             if not user_enabled:
@@ -42,7 +43,7 @@ def get_orphan_info_from_query(query_result):
             if not project_enabled:
                 message.append('Project {} is deactivated'.format(obj['project_name']))
             orphans[orphan_id] = ' and '.join(message)
-        
+
     return orphans
 
 def get_orphan_leases(db):
@@ -57,23 +58,23 @@ def get_orphan_instances_kvm(db, kc):
         user_id = obj['user_id']
         project_id = obj['project_id']
         instance_id = obj['uuid']
-        
-        try:        
+
+        try:
             user = kc.users.get(user_id)
             user_enabled = user is not None and user.enabled
         except exceptions.http.NotFound:
             user_enabled = False
-        
+
         try:
             project = kc.tenants.get(project_id)
             project_enabled = project is not None
         except exceptions.http.NotFound:
             project_enabled = False
-        
+
         if user_enabled and project_enabled:
             project_users = project.list_users()
             if user.id not in [u.id for u in project_users]:
-                orphans[instance_id] = 'User {} does not belong to Project {} anymore'.format(user_id, project_id) 
+                orphans[instance_id] = 'User {} does not belong to Project {} anymore'.format(user_id, project_id)
         else:
             message = []
             if not user_enabled:
@@ -81,28 +82,30 @@ def get_orphan_instances_kvm(db, kc):
             if not project_enabled:
                 message.append('Project {} is deactivated'.format(project_id))
             orphans[instance_id] = ' and '.join(message)
-    
+
     return orphans
-    
+
 
 def generate_report(orphan_dict, title):
     if not orphan_dict:
         return None
-    
+
     report = []
     report.append(title)
     report.append("{:<45} {:<50}".format('ID','Message'))
     for k, v in orphan_dict.iteritems():
         report.append("{:<45} {:<50}".format(k, v))
-    
+
     return '\n'.join(report)
-    
+
+
+@prometheus_exporter
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
     parser = argparse.ArgumentParser(description='Detects orphan leases and remove them.')
-    
+
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -121,12 +124,12 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
-    
+
     db = mysqlargs.connect()
     db.version = args.dbversion
-    
+
     kvm = args.kvm
-    
+
     if args.slack:
         slack = Slackbot(args.slack, script_name='orphan-detector')
     else:
@@ -137,14 +140,14 @@ def main(argv=None):
         os_vars = {k: os.environ[k] for k in os.environ if k.startswith('OS_')}
         if args.osrc:
             os_vars.update(osapi.load_osrc(args.osrc))
-            
-        auth = v2.Password(username=os_vars['OS_USERNAME'], 
-                           password=os_vars['OS_PASSWORD'], 
-                           tenant_name=os_vars['OS_TENANT_NAME'], 
+
+        auth = v2.Password(username=os_vars['OS_USERNAME'],
+                           password=os_vars['OS_PASSWORD'],
+                           tenant_name=os_vars['OS_TENANT_NAME'],
                            auth_url=os_vars['OS_AUTH_URL'])
         sess = session.Session(auth=auth)
         keystone = client.Client(session=sess)
-    
+
         orphan_instances = get_orphan_instances_kvm(db, keystone)
     else:
         orphan_leases_report = generate_report(get_orphan_leases(db), "-" * 45 + "ORPHAN LEASES" + "-" * 45)
@@ -158,9 +161,9 @@ def main(argv=None):
                 print(orphan_leases_report)
             else:
                 print('No orphan leases detected')
-                
+
         orphan_instances = get_orphan_instances(db)
-    
+
     orphan_instances_report = generate_report(orphan_instances, "-" * 45 + "ORPHAN INSTANCES" + "-" * 45)
     if slack:
         if orphan_instances_report:

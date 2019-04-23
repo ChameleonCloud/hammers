@@ -33,6 +33,7 @@ from MySQLdb import ProgrammingError
 
 from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
+from hammers.util import prometheus_exporter
 
 OS_ENV_PREFIX = 'OS_'
 
@@ -160,6 +161,7 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
     return n_things_to_remove
 
 
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

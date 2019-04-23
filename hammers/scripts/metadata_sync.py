@@ -21,6 +21,7 @@ import six
 
 from hammers import osapi, osrest, query
 from hammers.mysqlargs import MySqlArgs
+from hammers.util import prometheus_exporter
 
 
 GRID_ENDPOINTS = {
@@ -167,6 +168,7 @@ def get_blazar_hosts(auth):
     return blazar_hosts
 
 
+@prometheus_exporter(__file__)
 def main(argv):
     mysqlargs = MySqlArgs({
         'user': 'root',
