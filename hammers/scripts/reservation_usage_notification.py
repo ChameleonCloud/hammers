@@ -12,6 +12,7 @@ from dateutil import tz
 
 from hammers import MySqlArgs, osapi, query
 from hammers.notifications import _email
+from hammers.util import prometheus_exporter
 
 logging.basicConfig()
 
@@ -67,6 +68,7 @@ def get_idle_leases(db):
     return results
 
 
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

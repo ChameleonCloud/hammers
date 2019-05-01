@@ -24,11 +24,13 @@ import requests
 
 from hammers import osapi, osrest
 from hammers.slack import Slackbot
+from hammers.util import prometheus_exporter
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'curiouser'
 
 
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

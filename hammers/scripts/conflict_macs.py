@@ -25,12 +25,13 @@ import requests
 from hammers import osrest
 from hammers.osapi import load_osrc, Auth
 from hammers.slack import Slackbot
-from hammers.util import nullcontext
+from hammers.util import nullcontext, prometheus_exporter
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'conflict-macs'
 
 
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

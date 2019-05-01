@@ -38,7 +38,7 @@ import requests
 from hammers import osrest
 from hammers.osapi import load_osrc, Auth
 from hammers.slack import Slackbot
-from hammers.util import error_message_factory
+from hammers.util import error_message_factory, prometheus_exporter
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'ironic-error-resetter'
@@ -188,6 +188,7 @@ class NodeResetter(object):
         osrest.ironic_node_set_state(self.auth, self.nid, 'deleted')
 
 
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

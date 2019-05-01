@@ -15,8 +15,10 @@ from ironicclient import client as ironic_client
 from keystoneclient.auth.identity import v2
 from keystoneclient import session
 from keystoneclient.v2_0 import client
+from hammers.util import prometheus_exporter
 
 
+@prometheus_exporter(__file__)
 def main():
     # Command line argument(s)
     parser = argparse.ArgumentParser()
