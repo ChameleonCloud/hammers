@@ -1,70 +1,55 @@
-import keystoneauth1
 import datetime
-from keystoneauth1.identity import v3
-from keystoneauth1 import loading
-from keystoneauth1 import session
-from novaclient import client as nova_client
-from blazarclient import client as blazar_client
+import pytz
+import sys
+import argparse
+import os
+import itertools
+from hammers import osapi, osrest
+from django.utils import timezone
+from hammers.osrest.nova import _addremove_host
+
+# Set env variables
+os.environ["OS_AUTH_URL"] = "http://10.20.111.241:35357/v3"
+
+# Let's parse some CLI arguments
+parser = argparse.ArgumentParser(description='Clean old Nova aggregates tied to expired Blazar leases.')
+# The 'osapi' module has a helper to add rules to parse well-known arguments
+# (like the OpenStack username/password)
+osapi.add_arguments(parser)
+# Invoke the parser on the CLI arguments, save as 'args'
+args = parser.parse_args(sys.argv[1:])
+# Pass args to Auth constructor; will fall back to finding values in well-known env vars
+# (like OS_USERNAME/OS_PASSWORD)
+auth = osapi.Auth.from_env_or_args(args=args)
+
+# Get aggregates and leases
+aggregates = osrest.nova.aggregates(auth)
+leases = osrest.blazar.leases(auth)
+
+# Get leases with past end dates
+now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
+
+def is_terminated(lease):
+    dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
+    return now > datetime.datetime.strptime(lease['end_date'], dt_fmt).replace(tzinfo=pytz.timezone('UTC'))
+
+# Match lease to aggregate
+def aggregates_for_lease(lease):
+    physical_reservation_ids = [r['id'] for r in lease['reservations'] if r['resource_type'] == 'physical:host']
+    return [x for x in aggregates.values() if x['name'] in physical_reservation_ids]
 
 def main():
+ 
+    term_leases = [lease for lease in leases.values() if is_terminated(lease)]
+    old_aggregates = [aggregates_for_lease(lease) for lease in term_leases if aggregates_for_lease(lease) != None]
+    aggregate_list = list(itertools.chain(*old_aggregates))
 
-    loader = loading.get_plugin_loader('password')
-    auth = loader.load_from_options(auth_url='http://REDACTED:35357',
-    username='admin',
-    password='REDACTED',
-    project_id='REDACTED',
-    user_domain_id ='default')
+    for x in aggregate_list:
+        if x['hosts']:
+            for host in x['hosts']:
+                print("Deleting host {} from aggregate {}, then adding to freepool.".format(host, x['id']))
+                _addremove_host(auth, remove, x, host)
+                _addremove_host(auth, add, '1', host)
 
-    sess = session.Session(auth=auth)
-
-    nova = nova_client.Client(version='2', region_name='CHI@TACC', session=sess)
-    blazar = blazar_client.Client(1, session=sess, service_type='reservation', region_name='CHI@TACC')
-
-    term_leases=[]
-    agglist=[]
-    aggdetails=[]
-    aggnames=[]
-    exp_aggs=[]
-    agg_host=[]
-
-    # Find leases with end date before current time
-    leases=blazar.lease.list()
-
-    time=datetime.datetime.now()
-    for x in leases:
-        lease_time=datetime.datetime.strptime(x['end_date'], '%Y-%m-%dT%H:%M:%S.%f')
-        if lease_time < time:
-            print("lease ending {} has ended. Time {}".format(lease_time,time))
-            term_leases.append(x['reservations'][0]['id'])
-
-    # Find aggregates matching ended leases
-    aggregates=nova.aggregates.list()
-
-    for agg in aggregates:
-        ags=str(agg)
-        agglist.append(ags[12:17])
-
-    for x in agglist:
-        aggdetails.append(nova.aggregates.get_details(x).__dict__)
-
-    for x in aggdetails:
-        aggnames.append({x['id'] : x['name']})
-
-    for term_lease_item in term_leases:
-        try:
-            match=next(x for x in aggnames if term_lease_item == x.values()[0])
-            #print("{}".format(match.keys()[0]))
-            exp_aggs.append(match.keys()[0])
-        except StopIteration:
-            pass
-
-    for agg in exp_aggs:
-        agg_host.append({agg : nova.aggregates.get(agg).hosts})
-
-    for x in agg_host:
-        if x.values()!=[[]]:
-            for host in x.values()[0]:
-                print("Deleting host {} from aggregate {}".format(host, x.keys()))
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
