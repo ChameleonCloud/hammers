@@ -34,6 +34,7 @@ setup(
             'undead-instances = hammers.scripts.undead_instances:main',
             'reservation-usage-notification = hammers.script.reservation_usage_notification',
             'orphans-detector = hammers.scripts.orphans_detector:main',
+            'clean-old-aggregates = hammers.scripts.clean_old_aggregates:main',
         ],
     },
 
