@@ -48,8 +48,8 @@ def main():
         if x['hosts']:
             for host in x['hosts']:
                 print("Deleting host {} from aggregate {}, then adding to freepool.".format(host, x['id']))
-                _addremove_host(auth, remove, x, host)
-                _addremove_host(auth, add, '1', host)
+                _addremove_host(auth, "remove", x, host)
+                _addremove_host(auth, "add", '1', host)
 
 if __name__ == '__main__':
     main()
