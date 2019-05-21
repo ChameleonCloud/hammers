@@ -18,6 +18,7 @@ from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
 from hammers.notifications import _email
+from hammers.util import prometheus_exporter
 
 
 LEASES_ALLOWED = 1
