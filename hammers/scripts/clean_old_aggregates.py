@@ -5,7 +5,6 @@ import argparse
 import os
 import itertools
 from hammers import osapi, osrest
-from django.utils import timezone
 from hammers.osrest.nova import aggregate_move_host
 from hammers.osrest.nova import aggregate_delete
 
