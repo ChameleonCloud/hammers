@@ -8,6 +8,11 @@ from hammers import osapi, osrest
 from hammers.osrest.nova import aggregate_move_host
 from hammers.osrest.nova import aggregate_delete
 
+# Append "/v3" to OS_AUTH_URL, if necesary
+auth_url = os.environ["OS_AUTH_URL"]
+if not re.search("\/v3$", auth_url):
+  os.environ["OS_AUTH_URL"]=auth_url+"/v3"
+
 parser = argparse.ArgumentParser(description='Clean old Nova aggregates tied to expired Blazar leases.')
 osapi.add_arguments(parser)
 args = parser.parse_args(sys.argv[1:])
