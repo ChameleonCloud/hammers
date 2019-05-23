@@ -4,6 +4,7 @@ import sys
 import argparse
 import os
 import itertools
+import re
 from hammers import osapi, osrest
 from hammers.osrest.nova import aggregate_move_host
 from hammers.osrest.nova import aggregate_delete
