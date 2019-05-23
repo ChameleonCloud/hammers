@@ -6,6 +6,7 @@ jinja2
 keystoneauth1
 python-keystoneclient
 prometheus-client==0.0.13
+re
 
 # dev/deploy
 invoke
