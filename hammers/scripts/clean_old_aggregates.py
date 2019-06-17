@@ -24,11 +24,12 @@ auth = osapi.Auth.from_env_or_args(args=args)
 aggregates = osrest.nova.aggregates(auth)
 leases = osrest.blazar.leases(auth)
 
-# Get leases with past end dates
-now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
-
 def is_terminated(lease):
     dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
+
+    # Get leases with past end dates
+    now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
+
     return now > datetime.datetime.strptime(lease['end_date'], dt_fmt).replace(tzinfo=pytz.timezone('UTC'))
 
 # Match lease to aggregate
