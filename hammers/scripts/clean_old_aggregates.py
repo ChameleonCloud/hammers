@@ -42,7 +42,7 @@ def aggregates_for_lease(lease):
 def clear_aggregates(agg_list):
 
     report = []
-    report.append("{:<45} {:<50}".format('ID','Message'))
+#    report.append("{:<45} {:<50}".format('ID','Message'))
 
     for x in agg_list:   
         if x['hosts']:   
@@ -52,8 +52,11 @@ def clear_aggregates(agg_list):
             report.append("Deleting aggregate {}".format(host, x['id']))
             aggregate_delete(auth, x['id'])
 
-    print report
-    return report
+    if report != []:
+      print  report
+      return report
+    else:
+      return None
 
 
 def main(argv=None):
