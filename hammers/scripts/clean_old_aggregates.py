@@ -78,7 +78,7 @@ def main(argv=None):
         if agg_report:
             slack.post('clean-old-aggregates', agg_report, color='#FF0000')
         else:
-            slack.post('clean-old-aggregates', 'Aggregates are clean', color='#000000')
+            slack.post('clean-old-aggregates', 'Aggregates are clean', color='#CCCCCC')
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
