@@ -17,6 +17,8 @@ if not re.search("\/v3$", auth_url):
 
 parser = argparse.ArgumentParser(description='Clean old Nova aggregates tied to expired Blazar leases.')
 osapi.add_arguments(parser)
+parser.add_argument('--slack', type=str,
+        help='JSON file with Slack webhook information to send a notification to')
 args = parser.parse_args(sys.argv[1:])
 auth = osapi.Auth.from_env_or_args(args=args)
 
@@ -66,6 +68,8 @@ def main(argv=None):
 
     if args.slack:
         slack = Slackbot(args.slack, script_name='clean-old-aggregates')
+    else:
+        slack = None
 
     if slack:
         if agg_report:
