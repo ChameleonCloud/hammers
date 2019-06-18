@@ -42,19 +42,35 @@ def aggregates_for_lease(lease):
 def clear_aggregates(agg_list):
 
     report = []
-#    report.append("{:<45} {:<50}".format('ID','Message'))
 
     for x in agg_list:   
         if x['hosts']:   
-            for host in x['hosts']:                 
-                report.append("Deleting host {} from aggregate {} and returning to freepool".format(host, x['id']))
-                aggregate_move_host(auth, host, x['id'], 1) 
-            report.append("Deleting aggregate {}".format(host, x['id']))
-            aggregate_delete(auth, x['id'])
+            for host in x['hosts']:
+                try:                
+                    report.append("Deleting host {} from aggregate {} and returning to freepool. ".format(host, x['id']))
+                    aggregate_move_host(auth, host, x['id'], 1) 
+                except HTTPError:
+                    report.append("Error: Host {} not in aggregate {} and/or already in freepool. ".format(host, x['id']))
+                    pass
+                except:
+                    report.append("Unexpected error.")
+                    pass
+
+            try:
+                report.append("Deleting aggregate {}".format(host, x['id']))
+                aggregate_delete(auth, x['id'])
+            except HTTPError:
+                report.append("Error: Aggregate {} does not exist.".format(host, x['id']))
+                pass
+            except:
+                report.append("Unexpected error.")
+                pass
+
+    str_report = ''.join(report)
 
     if report != []:
-      print  report
-      return report
+      print  str_report
+      return str_report
     else:
       return None
 
