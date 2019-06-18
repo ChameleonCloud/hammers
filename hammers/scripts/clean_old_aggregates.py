@@ -46,21 +46,21 @@ def clear_aggregates(agg_list):
 
     report = []
 
-    for x in agg_list:   
+    for x in agg_list:
         if x['hosts']:   
             for host in x['hosts']:
                 try:                
-                    report.append("Deleting host {} from aggregate {} and returning to freepool. " + "\n".format(host, x['id']))
+                    report.append("Deleting host {} from aggregate {} and returning to freepool. ".format(host, x['id']) + "\n")
                     aggregate_move_host(auth, host, x['id'], 1) 
                 except:
-                    report.append("Host {} present in aggregate {} and freepool. Removed from aggregate. " + "\n".format(host, x['id']))
+                    report.append("Host {} present in aggregate {} and freepool. Removed from aggregate. ".format(host, x['id']) + "\n")
                     pass
 
             try:
-                report.append("Deleting aggregate {}. " + "\n".format(host, x['id']))
+                report.append("Deleting aggregate {}. ".format(host, x['id']) + "\n")
                 aggregate_delete(auth, x['id'])
             except:
-                report.append("Unexpected error deleting aggregate {}. " + "\n".format(x['id']))
+                report.append("Unexpected error deleting aggregate {}. ".format(x['id']) + "\n")
                 pass
 
     str_report = ''.join(report)
