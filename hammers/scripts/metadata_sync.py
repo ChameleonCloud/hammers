@@ -169,7 +169,10 @@ def get_blazar_hosts(auth):
 
 
 @prometheus_exporter(__file__)
-def main(argv):
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+        
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
