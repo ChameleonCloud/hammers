@@ -75,7 +75,7 @@ def main(argv=None):
 
     term_leases = [lease for lease in leases.values() if is_terminated(lease)]
 
-    old_aggregates = [aggregates_for_lease(lease) for lease in term_leases if aggregates_for_lease(lease) != None]
+    old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
 
     aggregate_list = list(itertools.chain(*old_aggregates))
 
