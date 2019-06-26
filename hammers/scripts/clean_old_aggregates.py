@@ -66,7 +66,6 @@ def clear_aggregates(agg_list):
     str_report = ''.join(report)
 
     if report != []:
-      print  str_report
       return str_report
     else:
       return None
@@ -81,6 +80,8 @@ def main(argv=None):
     aggregate_list = list(itertools.chain(*old_aggregates))
 
     agg_report = clear_aggregates(aggregate_list)
+    
+    print(agg_report)
 
     if args.slack:
         slack = Slackbot(args.slack, script_name='clean-old-aggregates')
