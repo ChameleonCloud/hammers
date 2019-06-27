@@ -9,10 +9,8 @@ import requests
 from urllib2 import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
-from hammers.osrest.nova import aggregate_move_host
 from hammers.osrest.nova import aggregate_delete
-from hammers.osrest.nova import aggregate_remove_host
-
+from hammers.osrest.nova import _addremove_host
 
 # Append "/v3" to OS_AUTH_URL, if necesary
 auth_url = os.environ["OS_AUTH_URL"]
@@ -52,14 +50,11 @@ def clear_aggregates(agg_list):
             for host in x['hosts']:
                 try:                
                     report.append("Deleting host {} from aggregate {} and returning to freepool. ".format(host, x['id']) + "\n")
-                    aggregate_move_host(auth, host, x['id'], 1)
-                except requests.exceptions.HTTPError:
-                    report.append("Host {} present in aggregate {} and freepool. Removed from aggregate. ".format(host, x['id']) + "\n")
+                    _addremove_host(auth, 'remove_host', x['id'], host)
+                    _addremove_host(auth, 'add_host', 1, host)
+               except:
+                    report.append("Unexpected error moving host {} from aggregate {} to freepool. ".format(host, x['id']) + "\n")
                     pass
-                except:
-                    report.append("Unexpected error moving host {} from aggregate {} to freepool. ".formar(host, x['id']) + "\n")
-                    pass
-
             try:
                 report.append("Deleting aggregate {}. ".format(x['id']) + "\n")
                 aggregate_delete(auth, x['id'])
