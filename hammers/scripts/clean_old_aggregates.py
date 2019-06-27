@@ -5,6 +5,7 @@ import argparse
 import os
 import itertools
 import re
+import requests
 from urllib2 import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
@@ -47,17 +48,20 @@ def clear_aggregates(agg_list):
     report = []
 
     for x in agg_list:
-        if x['hosts']:   
+        if x['hosts']:
             for host in x['hosts']:
                 try:                
                     report.append("Deleting host {} from aggregate {} and returning to freepool. ".format(host, x['id']) + "\n")
-                    aggregate_move_host(auth, host, x['id'], 1) 
-                except:
+                    aggregate_move_host(auth, host, x['id'], 1)
+                except requests.exceptions.HTTPError:
                     report.append("Host {} present in aggregate {} and freepool. Removed from aggregate. ".format(host, x['id']) + "\n")
+                    pass
+                except:
+                    report.append("Unexpected error moving host {} from aggregate {} to freepool. ".formar(host, x['id']) + "\n")
                     pass
 
             try:
-                report.append("Deleting aggregate {}. ".format(host, x['id']) + "\n")
+                report.append("Deleting aggregate {}. ".format(x['id']) + "\n")
                 aggregate_delete(auth, x['id'])
             except:
                 report.append("Unexpected error deleting aggregate {}. ".format(x['id']) + "\n")
@@ -80,7 +84,7 @@ def main(argv=None):
     aggregate_list = list(itertools.chain(*old_aggregates))
 
     agg_report = clear_aggregates(aggregate_list)
-    
+
     print(agg_report)
 
     if args.slack:
