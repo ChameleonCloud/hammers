@@ -52,7 +52,7 @@ def clear_aggregates(agg_list):
                     report.append("Deleting host {} from aggregate {} and returning to freepool. ".format(host, x['id']) + "\n")
                     _addremove_host(auth, 'remove_host', x['id'], host)
                     _addremove_host(auth, 'add_host', 1, host)
-               except:
+                except:
                     report.append("Unexpected error moving host {} from aggregate {} to freepool. ".format(host, x['id']) + "\n")
                     pass
             try:
