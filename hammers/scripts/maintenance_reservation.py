@@ -14,7 +14,6 @@ from keystoneauth1.identity import v3
 
 from hammers import MySqlArgs
 from hammers.slack import Slackbot
-from hammers.util import prometheus_exporter
 
 logging.basicConfig()
 
@@ -122,7 +121,6 @@ def reserve(sess, node, start_time, requested_hours, reason, operator, region, d
     
     return start_time_str_in_ct, end_time_str_in_ct
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv
