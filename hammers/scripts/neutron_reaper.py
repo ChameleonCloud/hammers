@@ -4,8 +4,7 @@
 
     neutron-reaper {info, delete} \
                    {ip, port} \
-                   <grace-days> \
-                   [ --dbversion ocata ]
+                   <grace-days>
 
 Reclaims idle floating IPs and cleans up stale ports.
 
@@ -14,12 +13,8 @@ Required arguments, in order:
 * ``info`` to just display what would be cleaned up, or actually clean it up with ``delete``.
 * Consider floating ``ip``'s or ``port``'s
 * A project needs to be idle for ``grace-days`` days.
-
-Optional arguments:
-
-* ``--dbversion ocata`` needed for the Ocata release as the database schema
-  changed slightly.
 '''
+#TODO: Used for KVM site only. After upgrading KVM site to OpenStack Rocky version, remove this script and use floatingip-reaper.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
@@ -29,11 +24,8 @@ import collections
 import datetime
 from pprint import pprint
 
-from MySQLdb import ProgrammingError
-
 from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
-from hammers.util import prometheus_exporter
 
 OS_ENV_PREFIX = 'OS_'
 
@@ -48,14 +40,6 @@ RESOURCE_DELETE_COMMAND = {
 }
 
 assert set(RESOURCE_QUERY) == set(RESOURCE_DELETE_COMMAND)
-
-
-def normalize_project_name(s, kvm=False):
-    if kvm:
-        return s
-    else:
-        return s.lower().replace('-', '').strip()
-
 
 def days_past(dt):
     if isinstance(dt, str):
@@ -79,23 +63,16 @@ def check_lease_past_end_date(db, not_down):
                     del not_down[idx]
 
 
-def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, quiet=False):
+def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
     future_projects = set()
     db_names = ['nova']
-    if not kvm:
-        future_projects = {
-            normalize_project_name(row['project_id'])
-            for row
-            in query.future_reservations(db)
-        }
-        db_names.append('nova_cell0')
 
     project_last_seen = {}
     for db_name in db_names:
-        for row in query.latest_instance_interaction(db, kvm, db_name):
+        for row in query.latest_instance_interaction(db, db_name):
             # Projects that have active instances are not considered as idled projects
             if row['active']: continue
-            proj_id = normalize_project_name(row['id'], kvm)
+            proj_id = row['id']
             if (proj_id in whitelist
                     or row['name'] in whitelist
                     or proj_id in future_projects):
@@ -134,11 +111,6 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
                 if (resource['status'] != 'DOWN'):
                     not_down.append(resource)
 
-        # Check if ips were not properly removed from lease
-        # that expired.
-        if not_down and not kvm and type_=='ip':
-            check_lease_past_end_date(db, not_down)
-
         if not_down:
             raise RuntimeError('error: not all {}s selected are in "DOWN" state'
                 '.\n\n{}'.format(type_, not_down))
@@ -161,7 +133,6 @@ def reaper(db, auth, type_, idle_days, whitelist, kvm=False, describe=False, qui
     return n_things_to_remove
 
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -183,10 +154,6 @@ def main(argv=None):
         help='Quiet mode. No output if there was nothing to do.')
     parser.add_argument('--slack', type=str,
         help='JSON file with Slack webhook information to send a notification to')
-    parser.add_argument('-d', '--dbversion', type=str,
-        help='Version of the database. Schemas differ, pick the appropriate one.',
-        choices=[query.LIBERTY, query.OCATA], default=query.LIBERTY)
-    parser.add_argument('--kvm', help='Run at KVM site', action='store_true')
 
     parser.add_argument('action', choices=['info', 'delete'],
         help='Just display info or actually delete them?')
@@ -198,12 +165,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
-    auth = osapi.Auth.from_env_or_args(args=args)
-
-    if args.action == 'delete' and args.type == 'port' and args.dbversion == 'ocata':
-        print('Checking ports on Ocata isn\'t validated, refusing to '
-              'automatically delete.', file=sys.stderr)
-        sys.exit(1)
+    auth = osapi.Authv2.from_env_or_args(args=args)
 
     if args.slack:
         slack = Slackbot(args.slack, script_name='neutron-reaper')
@@ -213,10 +175,10 @@ def main(argv=None):
     whitelist = set()
     if args.whitelist:
         with open(args.whitelist) as f:
-            whitelist = {normalize_project_name(line, args.kvm) for line in f}
+            whitelist = {line for line in f}
 
     db = mysqlargs.connect()
-    db.version = args.dbversion
+    db.version = query.LIBERTY
 
     kwargs = {
         'db': db,
@@ -224,7 +186,6 @@ def main(argv=None):
         'type_': args.type,
         'idle_days': args.idle_days,
         'whitelist': whitelist,
-        'kvm': args.kvm,
         'describe': args.action == 'info',
         'quiet': args.quiet,
     }

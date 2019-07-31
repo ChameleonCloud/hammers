@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import functools
 
 LIBERTY = 'liberty'
-OCATA = 'ocata'
+ROCKY = 'rocky'
 QUERIES = {}
 
 
@@ -23,7 +23,7 @@ def project_col(version):
     # might also be sensitive to the component (neutron/nova/etc.)
     return {
         LIBERTY: 'tenant_id',
-        OCATA: 'project_id',
+        ROCKY: 'project_id',
     }[version]
 
 
@@ -65,7 +65,7 @@ def idle_projects(db):
     projcol = project_col(db.version)
     old_sql = sql_template.format(projcol=projcol, novatable='nova')
 
-    if db.version == 'ocata':
+    if db.version == 'rocky':
         # smash together data from two databases. newer openstack split the database
         # into nova (legacy?) and nova_cell0 (new schema? distributed?)
         new_sql = sql_template.format(projcol=projcol, novatable='nova_cell0')
@@ -104,22 +104,18 @@ _LATEST_INSTANCE_DATABASES = {
 }
 
 @query
-def latest_instance_interaction(db, kvm, nova_db_name='nova'):
+def latest_instance_interaction(db, nova_db_name='nova'):
     '''
     Get the latest interaction date with instances on the target database name.
     Combine as you so desire.
     '''
+    #TODO: used in neutron_reaper for KVM site; remove this function with neutron_reaper after KVM upgrading
     if nova_db_name not in _LATEST_INSTANCE_DATABASES:
         # can't parameterize a database name
         raise RuntimeError('invalid database selection')
-    if kvm:
-        table = '{nova_db_name}.instances'.format(nova_db_name=nova_db_name)
-        first_col = 'project_id'
-        second_col = 'project_id'
-    else:
-        table = '{nova_db_name}.instances AS inst INNER JOIN keystone.project AS proj ON inst.project_id = proj.id'.format(nova_db_name=nova_db_name)
-        first_col = 'proj.name'
-        second_col = 'proj.id'
+    table = '{nova_db_name}.instances'.format(nova_db_name=nova_db_name)
+    first_col = 'project_id'
+    second_col = 'project_id'
 
     sql = '''\
     SELECT
@@ -232,6 +228,32 @@ def owned_compute_ip_single(db, project_id):
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_id], limit=None)
 
+@query
+def idle_not_reserved_floating_ips(db, threshold_days):
+    '''
+    Return all idle floating ips who satisfy the following conditions
+    1) status is "DOWN"
+    2) it is not associated to any fixed ports (instances)
+    3) last updated time is <threshold_days> days ago
+    4) not reserved
+    
+    NOTE: For Rocky version only!
+    '''
+    sql = '''
+    SELECT f.project_id AS project_id, f.id AS floating_ip_id
+    FROM neutron.floatingips AS f
+    JOIN neutron.standardattributes AS s
+    ON f.standard_attr_id = s.id
+    LEFT JOIN neutron.ports AS p
+    ON f.fixed_port_id = p.id
+    LEFT JOIN neutron.tags AS t
+    ON f.standard_attr_id = t.standard_attr_id
+    WHERE (t.tag IS NULL OR (t.tag != 'blazar' AND t.tag NOT LIKE 'reservation:%%'))
+    AND f.status = 'DOWN'
+    AND p.id IS NULL
+    AND s.updated_at < UTC_TIMESTAMP() - INTERVAL %s DAY;
+    '''
+    return db.query(sql, args=[threshold_days], limit=None)
 
 @query
 def projects_with_unowned_ports(db, version='liberty'):

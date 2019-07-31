@@ -215,7 +215,7 @@ def main(argv=None):
         slack = None
 
     db = mysqlargs.connect()
-    db.version = 'ocata'
+    db.version = query.ROCKY
 
     kwargs = {
         'db': db,
