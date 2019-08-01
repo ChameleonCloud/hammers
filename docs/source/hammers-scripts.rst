@@ -144,7 +144,7 @@ is already done.
     $venv_bin = '/root/scripts/hammers/venv/bin'
 
     cron { 'hammers-neutronreaper-ip':
-        command => "$venv_bin/neutron-reaper delete ip 14 --dbversion ocata --slack $slack_json_loc --osrc $osrc_loc 2>&1 | /usr/bin/logger -t hammers-neutronreaper-ip",
+        command => "$venv_bin/neutron-reaper delete ip 14 --slack $slack_json_loc --osrc $osrc_loc 2>&1 | /usr/bin/logger -t hammers-neutronreaper-ip",
         user => 'root',
         hour => 5,
         minute => 20,

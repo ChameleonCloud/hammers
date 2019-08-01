@@ -94,7 +94,7 @@ def main(argv=None):
     mysqlargs.extract(args)
 
     db = mysqlargs.connect()
-    db.version = query.OCATA
+    db.version = query.ROCKY
 
     auth = osapi.Auth.from_env_or_args(args=args)
     email_host = _email.get_host()

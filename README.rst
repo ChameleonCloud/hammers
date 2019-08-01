@@ -6,9 +6,9 @@ Bag o' Hammers
 
 Collection of various tools to keep things ship-shape. Not particularly bright tools, but good for a first-pass.
 
-1. Neutron resource reaper
+1. Neutron resource reaper for KVM
 
-  ``neutron-reaper {info, delete} {ip, port} <grace-days> [ --dbversion ocata ]``
+  ``neutron-reaper {info, delete} {ip, port} <grace-days>``
 
   Reclaims idle floating IPs and cleans up stale ports.
 
@@ -47,6 +47,12 @@ Collection of various tools to keep things ship-shape. Not particularly bright t
   ``reservation-usage-notification``
   
   Check and notify users about their reservation.
+  
+ 8. Floating IP reaper for CHI
+ 
+   ``floatingip-reaper --grace-days <grace days>``
+   
+   Reclaim idle floating IPs.
 
 Common options:
 
@@ -96,7 +102,7 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
   $venv_bin = '/root/scripts/hammers/venv/bin'
 
   cron { 'hammers-neutronreaper-ip':
-    command => "$venv_bin/neutron-reaper delete ip 14 --dbversion ocata --slack $slack_json_loc --osrc $osrc_loc [--kvm if at KVM site] 2>&1 | /usr/bin/logger -t hammers-neutronreaper-ip",
+    command => "$venv_bin/neutron-reaper delete ip 14 --slack $slack_json_loc --osrc $osrc_loc 2>&1 | /usr/bin/logger -t hammers-neutronreaper-ip",
     user => 'root',
     hour => 5,
     minute => 20,
@@ -134,6 +140,12 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
   }
   cron { 'hammers-orphansdetector':
     command => "$venv_bin/orphans-detector --slack $slack_json_loc [--kvm if at KVM site] 2>&1 | /usr/bin/logger -t hammers-orphansdetector",
+    user => 'root',
+    hour => 5,
+    minute => 45,
+  }
+  cron { 'floatingip-reaper':
+    command => "$venv_bin/floatingip-reaper --slack $slack_json_loc  --osrc $osrc_loc --grace-days 3 2>&1 | /usr/bin/logger -t hammers-floatingipreaper",
     user => 'root',
     hour => 5,
     minute => 45,

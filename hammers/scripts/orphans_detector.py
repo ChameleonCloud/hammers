@@ -8,7 +8,7 @@ Detects orphan leases and instances.
 
 Optional arguments:
 
-* ``--dbversion ocata`` needed for the Ocata release as the database schema
+* ``--dbversion rocky`` needed for the Rocky release as the database schema
   changed slightly.
 * ``--kvm`` run on kvm site.
 
@@ -116,7 +116,7 @@ def main(argv=None):
 
     parser.add_argument('-d', '--dbversion', type=str,
         help='Version of the database. Schemas differ, pick the appropriate one.',
-        choices=[query.LIBERTY, query.OCATA], default=query.OCATA)
+        choices=[query.LIBERTY, query.ROCKY], default=query.ROCKY)
     parser.add_argument('--slack', type=str,
         help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('--kvm', help='Run at KVM site', action='store_true')
