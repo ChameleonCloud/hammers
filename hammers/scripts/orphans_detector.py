@@ -99,7 +99,7 @@ def generate_report(orphan_dict, title):
     return '\n'.join(report)
 
 
-@prometheus_exporter
+@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv
