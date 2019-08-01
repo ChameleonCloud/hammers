@@ -35,6 +35,7 @@ setup(
             'reservation-usage-notification = hammers.script.reservation_usage_notification',
             'orphans-detector = hammers.scripts.orphans_detector:main',
             'clean-old-aggregates = hammers.scripts.clean_old_aggregates:main',
+            'floatingip-reaper = hammers.scripts.floatingip_reaper:main',
         ],
     },
 
