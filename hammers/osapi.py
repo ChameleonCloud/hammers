@@ -82,7 +82,7 @@ class Auth(object):
     required_os_vars = {
         'OS_USERNAME',
         'OS_PASSWORD',
-        'OS_PROJECT_ID',
+        'OS_PROJECT_NAME',
         'OS_AUTH_URL',
     }
 
@@ -111,6 +111,8 @@ class Auth(object):
     def __init__(self, rc):
         self.rc = rc
         missing_vars = self.required_os_vars - set(rc)
+        if 'OS_PROJECT_DOMAIN_NAME' not in self.rc and 'OS_PROJECT_DOMAIN_ID' not in self.rc:
+            missing_vars.add('OS_PROJECT_DOMAIN_NAME/ID')
         if missing_vars:
             raise RuntimeError('Missing required OS values: {}'.format(missing_vars))
         self.auth_url = self.rc['OS_AUTH_URL']
@@ -125,6 +127,11 @@ class Auth(object):
         """
         Authenticate with Keystone to get a token and endpoint listing
         """
+        if 'OS_PROJECT_DOMAIN_ID' in self.rc:
+            domain_info = {"id": self.rc['OS_PROJECT_DOMAIN_ID']}
+        else:
+            domain_info = {"name": self.rc['OS_PROJECT_DOMAIN_NAME']}
+        
         response = requests.post(self.auth_url + '/auth/tokens', json={
             "auth": {
                 "identity": {
@@ -143,7 +150,8 @@ class Auth(object):
                 },
                 "scope": {
                     "project": {
-                        "id": self.rc['OS_PROJECT_ID']
+                        "name": self.rc['OS_PROJECT_NAME'],
+                        "domain": domain_info
                     }
                 }
             }
