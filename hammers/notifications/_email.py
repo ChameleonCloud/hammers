@@ -87,6 +87,27 @@ STACKED_LEASE_DELETED_EMAIL_BODY = '''
 </p>
 '''
 
+IDLE_LEASE_WARNING_EMAIL_BODY = '''
+<p>
+  We're sending this email to inform you that your lease
+  {{ vars['lease_name'] }} (ID: {{ vars['lease_id'] }}) has been idle for more
+  than {{ var['warn_period'] }} hours. If your lease is idle for more than
+  {{ var['grace_period'] }} hours it will be terminated to free up resources
+  for other users.
+</p>
+'''
+
+IDLE_LEASE_TERMINATION_EMAIL_BODY = '''
+<p>
+  We're sending this email to inform you that your lease
+  {{ vars['lease_name'] }} (ID: {{ vars['lease_id'] }}) has been terminated.
+  In order to promote fair sharing on Chameleon, we terminate unutilized
+  leases after a {{ vars['grace_period'] }} hour grace period from the start
+  time of the lease so that other users can make use of the resources.
+</p>
+'''
+
+
 def get_host():
     """Return email host."""
     blazar_config = configparser.ConfigParser()

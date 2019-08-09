@@ -236,7 +236,7 @@ def idle_not_reserved_floating_ips(db, threshold_days):
     2) it is not associated to any fixed ports (instances)
     3) last updated time is <threshold_days> days ago
     4) not reserved
-    
+
     NOTE: For Rocky version only!
     '''
     sql = '''
@@ -498,7 +498,7 @@ def get_idle_leases(db, hours):
     JOIN keystone.project AS p ON s.project_id = p.id
     '''
 
-    return db.query(sql, (hours, hours, hours), limit=None)
+    return db.query(sql, (hours,)*3, limit=None)
 
 def main(argv):
     """Run queries!"""
