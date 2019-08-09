@@ -36,6 +36,7 @@ setup(
             'orphans-detector = hammers.scripts.orphans_detector:main',
             'clean-old-aggregates = hammers.scripts.clean_old_aggregates:main',
             'floatingip-reaper = hammers.scripts.floatingip_reaper:main',
+            'unutilized-lease-reaper = hammers.scripts.unutilized_lease_reaper:main'
         ],
     },
 

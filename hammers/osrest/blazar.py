@@ -68,6 +68,16 @@ def lease_delete(auth, lease_id):
     return response
 
 
+def host_allocations(auth):
+    """Retrieve host allocations"""
+    response = requests.get(
+        url=auth.endpoint('reservation') + '/os-hosts/allocations',
+        headers=dict(x_auth_token=auth.token)
+    )
+    response.raise_for_status()
+    return response.json()['allocations']
+
+
 __all__ = [
     'blazar_host',
     'blazar_hosts',
@@ -75,6 +85,7 @@ __all__ = [
     'blazar_leases',
     'blazar_lease',
     'blazar_lease_delete',
+    'blazar_host_allocations'
 ]
 
 blazar_host = host
@@ -83,3 +94,4 @@ blazar_host_update = host_update
 blazar_leases = leases
 blazar_lease = lease
 blazar_lease_delete = lease_delete
+blazar_host_allocations = host_allocations
