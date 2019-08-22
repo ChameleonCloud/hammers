@@ -201,8 +201,7 @@ class Lease(object):
             self.id = self.lease['id']
 
         self.name = self.lease['name']
-        self.reservation = self.lease['reservations'][0]['id']
-        # print('created lease {}'.format(self.id))
+        self.reservations = self.lease['reservations']
 
     @classmethod
     def from_existing(cls, keystone_session, id):
