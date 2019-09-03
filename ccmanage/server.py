@@ -132,7 +132,7 @@ class Server(object):
             self.server = self.nova.servers.get(id)
         elif lease is not None:
             server_kwargs = instance_create_args(
-                lease.reservation, key=key, image=self.image, net_ids=net_ids,
+                lease.reservations[0]['id'], key=key, image=self.image, net_ids=net_ids,
                 **extra
             )
             self.server = self.nova.servers.create(**server_kwargs)
