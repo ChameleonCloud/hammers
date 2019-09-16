@@ -43,11 +43,11 @@ def append_global_identity_args(parser, argv):
     parser.set_defaults(os_user_domain_name=os.getenv('OS_USER_DOMAIN_NAME', 'default'))
     parser.set_defaults(os_region_name=os.getenv('OS_REGION_NAME', None))
 
-def get_session(auth_url, username, password, project_id, user_domain_name = 'default', project_domain_name = 'default'):
+def get_session(auth_url, username, password, project_name, user_domain_name = 'default', project_domain_name = 'default'):
     auth = v3.Password(auth_url=auth_url,
                        username=username,
                        password=password,
-                       project_id=project_id,
+                       project_name=project_name,
                        user_domain_name=user_domain_name,
                        project_domain_name=project_domain_name
                        )
@@ -154,7 +154,7 @@ def main(argv=None):
     auth_args = {'auth_url': args.os_auth_url,
                  'username': args.os_username,
                  'password': args.os_password,
-                 'project_id': args.os_project_id}
+                 'project_name': args.os_project_name}
     if args.os_user_domain_name:
         auth_args['user_domain_name'] = args.os_user_domain_name
     if args.os_project_domain_name:
@@ -162,7 +162,7 @@ def main(argv=None):
     # get admin session for node information
     admin_sess = get_session(**auth_args)
     # get maint session for creating lease
-    auth_args['project_id'] = '4ffe61cf850d4b45aef86b46411d33e1'
+    auth_args['project_name'] = 'maintenance'
     maint_sess = get_session(**auth_args)
     
     # get node details
