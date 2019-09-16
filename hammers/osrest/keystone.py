@@ -56,7 +56,7 @@ def project_lookup(auth, name_or_id):
 def user(auth, id):
     """Retrieves information about a user by ID"""
     response = requests.get(
-        url=auth.endpoint('identityv3') + '/users/{}'.format(id),
+        url=auth.endpoint('identity') + '/v3/users/{}'.format(id),
         headers={'X-Auth-Token': auth.token},
     )
     response.raise_for_status()

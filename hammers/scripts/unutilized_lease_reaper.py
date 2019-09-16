@@ -23,6 +23,11 @@ from hammers.osrest import blazar, ironic, keystone
 
 DEFAULT_WARN_HOURS = 6
 DEFAULT_GRACE_HOURS = 9
+EXCLUDED_PROJECT_IDS = [
+    '975c0a94b784483a885f4503f70af655',
+    '4ffe61cf850d4b45aef86b46411d33e1',
+    'd9faac3973a847f1b718fa765fe312e2',
+    'a40a60192c1b42ad9dcb40666663b0e3']
 
 
 def parse_time(time):
@@ -37,6 +42,12 @@ def inviolation_filter(hour):
 
     def inviolation(lease):
         start_time = parse_time(lease['start_date'])
+
+        if lease['project_id'] in EXCLUDED_PROJECT_IDS:
+            return False
+
+        if len(lease['nodes']) == 0:
+            return False
 
         if start_time > threshold:
             return False
@@ -76,12 +87,15 @@ def leases_with_node_details(auth):
     return leases
 
 
-def send_notification(lease, sender, subject, email_body):
-    user = keystone.user(lease['user_id'])
+def send_notification(auth, lease, sender, warn_period, termination_period,
+                      subject, email_body):
+    user = keystone.user(auth, lease['user_id'])
     html = _email.render_template(
         email_body,
         vars=dict(lease_name=lease['name'],
-                  lease_id=lease['id']))
+                  lease_id=lease['id'],
+                  warn_period=warn_period,
+                  termination_period=termination_period))
     _email.send(_email.get_host(), user['email'], sender, subject,
                 html.encode('utf8'))
 
@@ -94,13 +108,13 @@ def reaper(auth, sender, warn_period, termination_period, delete=False):
     if delete:
         for lease in leases_to_warn:
             send_notification(
-                lease, sender, warn_period, termination_period,
+                auth, lease, sender, warn_period, termination_period,
                 "Your lease {} is idle and may be terminated.",
                 _email.IDLE_LEASE_WARNING_EMAIL_BODY)
         for lease in leases_to_remove:
-            blazar.lease_delete(lease['id'])
+            blazar.lease_delete(auth, lease['id'])
             send_notification(
-                lease, sender, warn_period, termination_period,
+                auth, lease, sender, warn_period, termination_period,
                 "Your lease {} has been terminated.",
                 _email.IDLE_LEASE_TERMINATION_EMAIL_BODY)
 
