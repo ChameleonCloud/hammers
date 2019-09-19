@@ -65,7 +65,7 @@ def cureable_nodes(nodes_details):
         if (
             not n['maintenance'] and
             n['provision_state'] == 'error' and
-            any(ro.search(n['last_error']) for ro in ERROR_MATCHERS)
+            any(ro.search(str(n['last_error'])) for ro in ERROR_MATCHERS)
         )
     ]
     return bad_nodes
