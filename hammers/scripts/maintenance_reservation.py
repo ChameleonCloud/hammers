@@ -58,7 +58,7 @@ def get_session(auth_url, username, password, project_name, user_domain_name = '
 def get_nodes(sess, node_id_or_names):
     token = sess.get_token()
     try :
-        ironic_url = sess.get_endpoint(service_type='baremetal', interface='internal')
+        ironic_url = sess.get_endpoint(service_type='baremetal', interface='public')
     except Exception:
         traceback.print_exc(file=sys.stdout)
     ironic = ironic_client.get_client(1, token=token, endpoint=ironic_url)
