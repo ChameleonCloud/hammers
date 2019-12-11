@@ -73,7 +73,9 @@ def leases_with_node_details(auth):
     nodes_by_host = {
         hosts_by_node_uuid[k]: v for k, v
         in ironic.nodes(auth, details=True).items()}
-    allocations = blazar.host_allocations(auth)
+    allocations = [
+        x for x in blazar.host_allocations(auth)
+        if x['resource_id'] in nodes_by_host.keys()]
     allocs_by_lease = defaultdict(list)
 
     for alloc in allocations:
@@ -107,10 +109,11 @@ def reaper(auth, sender, warn_period, termination_period, delete=False):
 
     if delete:
         for lease in leases_to_warn:
-            send_notification(
-                auth, lease, sender, warn_period, termination_period,
-                "Your lease {} is idle and may be terminated.",
-                _email.IDLE_LEASE_WARNING_EMAIL_BODY)
+            if lease not in leases_to_remove:
+                send_notification(
+                    auth, lease, sender, warn_period, termination_period,
+                    "Your lease {} is idle and may be terminated.",
+                    _email.IDLE_LEASE_WARNING_EMAIL_BODY)
         for lease in leases_to_remove:
             blazar.lease_delete(auth, lease['id'])
             send_notification(
