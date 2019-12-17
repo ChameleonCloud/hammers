@@ -8,6 +8,7 @@ python-keystoneclient
 python-ironicclient
 python-blazarclient
 prometheus-client==0.0.13
+cmd2==0.8.9
 
 # dev/deploy
 invoke
