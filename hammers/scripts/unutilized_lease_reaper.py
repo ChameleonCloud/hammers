@@ -112,13 +112,14 @@ def reaper(auth, sender, warn_period, termination_period, delete=False):
             if lease not in leases_to_remove:
                 send_notification(
                     auth, lease, sender, warn_period, termination_period,
-                    "Your lease {} is idle and may be terminated.",
+                    "Your lease {} is idle and may be terminated.".format(
+                        lease['name']),
                     _email.IDLE_LEASE_WARNING_EMAIL_BODY)
         for lease in leases_to_remove:
             blazar.lease_delete(auth, lease['id'])
             send_notification(
                 auth, lease, sender, warn_period, termination_period,
-                "Your lease {} has been terminated.",
+                "Your lease {} has been terminated.".format(lease['name']),
                 _email.IDLE_LEASE_TERMINATION_EMAIL_BODY)
 
     return leases_to_warn, leases_to_remove
