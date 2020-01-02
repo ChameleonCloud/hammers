@@ -208,10 +208,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
 
-    if args.slack:
-        slack = Slackbot(args.slack)
-    else:
-        slack = None
+    slack = Slackbot(args.slack, script_name='ironic-error-resetter') if args.slack else None
 
     os_vars = {k: os.environ[k] for k in os.environ if k.startswith(OS_ENV_PREFIX)}
     if args.osrc:
@@ -227,103 +224,67 @@ def main(argv=None):
 
     auth = Auth(os_vars)
 
-    nodes = osrest.ironic_nodes(auth, details=True)
-    cureable = cureable_nodes(nodes)
+    try:
+        nodes = osrest.ironic_nodes(auth, details=True)
+        cureable = cureable_nodes(nodes)
 
-    if args.mode == 'info':
-        print('{} node(s) in a state that we can treat'.format(len(cureable)))
+        if args.mode == 'info':
+            print('{} node(s) in a state that we can treat'.format(len(cureable)))
+            for nid in cureable:
+                print('-' * 40)
+                print('\n'.join(
+                    '{:<25s} {}'.format(key, nodes[nid].get(key))
+                    for key
+                    in [
+                        'uuid',
+                        'provision_updated_at',
+                        'provision_state',
+                        'last_error',
+                        'instance_uuid',
+                        'extra',
+                        'maintenance',
+                    ]
+                ))
+            return
+
+        if len(cureable) == 0:
+            if args.verbose:
+                print('Nothing to do.')
+            return
+
+        print('To correct: {}'.format(repr(cureable)))
+
+        reset_ok = []
+        too_many = []
         for nid in cureable:
-            print('-' * 40)
-            print('\n'.join(
-                '{:<25s} {}'.format(key, nodes[nid].get(key))
-                for key
-                in [
-                    'uuid',
-                    'provision_updated_at',
-                    'provision_state',
-                    'last_error',
-                    'instance_uuid',
-                    'extra',
-                    'maintenance',
-                ]
-            ))
-        if slack:
-            if cureable:
-                message = ('{} nodes in correctable error states (no action '
-                           'taken)'.format(len(cureable)))
-                color = 'xkcd:orange red'
+            resetter = NodeResetter(auth, nid, dry_run=args.dry_run)
+            try:
+                resetter.reset()
+            except TooManyResets:
+                too_many.append(nid)
             else:
-                error_nodes = sum(1
-                    for (nid, n)
-                    in nodes.items()
-                    if (
-                        not n['maintenance'] and
-                        n['provision_state'] == 'error'
-                    )
-                )
-                if error_nodes:
-                    message = ('No nodes in correctable error states ({} other'
-                               ' nodes in error state)').format(error_nodes)
-                    color = 'xkcd:yellow'
-                else:
-                    message = 'No nodes in correctable error states'
-                    color = 'xkcd:green'
+                reset_ok.append((nid, resetter.tracker.count()))
 
-            slack.post(SUBCOMMAND, message, color=color)
-        return
-
-    if len(cureable) == 0:
-        if args.verbose:
-            message = 'Nothing to do.'
-            print(message)
-            if slack:
-                slack.post(SUBCOMMAND, message, color='xkcd:light grey')
-        return
-
-    print('To correct: {}'.format(repr(cureable)))
-    if slack:
-        message = ['Ironic nodes in correctable error states']
-        for nid in cureable:
-            message.append(' • `{}`: "{}"'.format(nid, nodes[nid]['last_error']))
-        message = '\n'.join(message)
-        slack.post(SUBCOMMAND, message, color='xkcd:darkish red')
-
-    reset_ok = []
-    too_many = []
-    for nid in cureable:
-        resetter = NodeResetter(auth, nid, dry_run=args.dry_run)
-        try:
-            resetter.reset()
-        except TooManyResets as e:
-            too_many.append(nid)
-        except Exception as e:
-            if slack:
-                error = '{}; check logs'.format(str(e))
-                slack.post(SUBCOMMAND, error, color='xkcd:red')
-            raise
-        else:
-            reset_ok.append((nid, resetter.tracker.count()))
-
-    print('Attempted to fix: {}'.format(repr(reset_ok)))
-    print('Refused to fix:   {}'.format(repr(too_many)))
-    if slack:
-        message = []
+        message_lines = []
         if reset_ok:
-            message.append('Attempted reset of nodes')
-            message.extend(' • `{}`: {} resets'.format(*r) for r in reset_ok)
+            message_lines.append('Performed reset of nodes')
+            message_lines.extend(' • `{}`: {} resets'.format(*r) for r in reset_ok)
         if too_many:
-            message.append('\nAbstained (already at limit)')
-            message.extend(' • `{}`'.format(*r) for r in reset_ok)
-
-        color = 'xkcd:chartreuse'
+            message_lines.append('Skipped (already at limit)')
+            message_lines.extend(' • `{}`'.format(*r) for r in reset_ok)
         if args.dry_run:
-            color = 'xkcd:yellow'
-            message.append('dry run, no changes actually made.')
-        if too_many:
-            color = 'xkcd:orange'
+            message_lines.append('dry run, no changes actually made.')
 
-        message = '\n'.join(message)
-        slack.post(SUBCOMMAND, message, color=color)
+        message = '\n'.join(message_lines)
+    
+        print(message)
+        
+        if slack and (not args.dry_run):
+            slack.success(message)
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
