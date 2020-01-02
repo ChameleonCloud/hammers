@@ -23,7 +23,7 @@ import requests
 from hammers import osrest
 from hammers.osapi import load_osrc, Auth
 from hammers.slack import Slackbot
-from hammers.util import error_message_factory, prometheus_exporter
+from hammers.util import error_message_factory
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'undead-instances'
@@ -57,7 +57,6 @@ def clear_node_instance_data(auth, node, validate=True):
     })
 
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

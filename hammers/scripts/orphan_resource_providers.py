@@ -17,7 +17,6 @@ import argparse
 
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
-from hammers.util import prometheus_exporter
 
 
 def resource_providers_fixer(db, describe=False, quiet=False):
@@ -33,7 +32,6 @@ def resource_providers_fixer(db, describe=False, quiet=False):
         return count
 
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

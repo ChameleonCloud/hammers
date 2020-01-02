@@ -24,7 +24,6 @@ from MySQLdb import ProgrammingError
 
 from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
-from hammers.util import prometheus_exporter
 
 COMMAND = 'dirty-ports'
 OS_ENV_PREFIX = 'OS_'
@@ -117,7 +116,6 @@ def cleaner(auth, db, take_action, assert_single, quiet=True, slack=None):
         slack.post(COMMAND, 'Cleaned {} ports.'.format(len(bad_ports)), color='xkcd:chartreuse')
 
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

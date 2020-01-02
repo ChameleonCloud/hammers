@@ -21,7 +21,6 @@ import os
 
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
-from hammers.util import prometheus_exporter
 
 from keystoneauth1.identity import v2
 from keystoneauth1 import session
@@ -99,7 +98,6 @@ def generate_report(orphan_dict, title):
     return '\n'.join(report)
 
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv

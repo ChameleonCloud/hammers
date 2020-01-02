@@ -4,7 +4,7 @@
 
     lease-stack-reaper {info, delete}
 
-Reclaims GPU nodes from leases that violate terms of use.
+Reclaims nodes from leases that violate terms of use.
 
 * ``info`` to just display leases or actuall delete them with ``delete``
 '''
@@ -18,7 +18,6 @@ from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
 from hammers.notifications import _email
-from hammers.util import prometheus_exporter
 
 
 LEASES_ALLOWED = 1
@@ -133,7 +132,7 @@ def send_delete_notification(gpu_user, leases, sender):
         vars={
             'username': gpu_user.name,
             'lease_list': [x[0] for x in leases]})
-    subject = "Your GPU lease(s) was deleted."
+    subject = "Your Chameleon lease(s) was deleted."
     _email.send(
         _email.get_host(),
         gpu_user.email,
@@ -175,7 +174,6 @@ def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
     return lease_delete_count
 
 
-@prometheus_exporter(__file__)
 def main(argv=None):
     if argv is None:
         argv = sys.argv
