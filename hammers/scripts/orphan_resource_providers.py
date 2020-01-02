@@ -55,37 +55,29 @@ def main(argv=None):
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
 
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='orphan-resource-providers')
-    else:
-        slack = None
+    slack = Slackbot(args.slack, script_name='orphan-resource-providers') if args.slack else None
 
-    db = mysqlargs.connect()
+    try:
+        db = mysqlargs.connect()
 
-    kwargs = {
-        'db': db,
-        'describe': args.action == 'info',
-        'quiet': args.quiet,
-    }
-    if slack:
-        with slack:  # log exceptions
-            update_count = resource_providers_fixer(**kwargs)
-    else:
-        update_count = resource_providers_fixer(**kwargs)
+        update_count = resource_providers_fixer(db=db, describe=args.action == 'info', quiet=args.quiet)
 
-    if slack and (args.action == 'update') and ((not args.quiet) or
-                                                update_count):
-        if update_count > 0:
-            message = (
-                'Commanded update of *{} resource providers*'
-                .format(update_count)
-            )
-            color = '#000000'
-        else:
-            message = ('No resource providers to update')
-            color = '#cccccc'
-
-        slack.post('orphan-resource-providers', message, color=color)
+        if args.action == 'update':
+            if update_count > 0:
+                message = (
+                    'Commanded update of *{} resource providers*'
+                    .format(update_count)
+                )
+                
+                print(message)
+                
+                slack.message(message)
+            elif not args.quiet:
+                print('No resource providers to delete')
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
