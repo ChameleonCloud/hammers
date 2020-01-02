@@ -25,7 +25,6 @@ from MySQLdb import ProgrammingError
 from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
 
-COMMAND = 'dirty-ports'
 OS_ENV_PREFIX = 'OS_'
 
 def ports_by_node(ports, assert_single=False):
@@ -76,46 +75,6 @@ def clean_ports(db, ports):
     db.db.commit()
 
 
-def cleaner(auth, db, take_action, assert_single, quiet=True, slack=None):
-    bad_ports = identify_dirty_ports(auth, assert_single)
-
-    print('Bad ports: {}'.format(len(bad_ports)))
-    for port in bad_ports:
-        print('- port {} (node {}) is borked'.format(port['uuid'], port['node_uuid']))
-
-    if slack:
-        if bad_ports:
-            message = ('{} ports with "`internal_info`" data on "`available`" nodes.{}\n{}'.format(
-                len(bad_ports),
-                '' if take_action else ' (Read-only mode, no action to be taken)',
-                '\n'.join(
-                    ' • port `{uuid}` on node `{node_uuid}`'.format(**p)
-                    for p
-                    in bad_ports
-                ),
-            ))
-            color = 'xkcd:darkish red'
-        elif not quiet:
-            message = 'No ports with "`internal_info`" data on "`available`" nodes.'
-            color = 'xkcd:light grey'
-        else:
-            message = None
-
-        if message:
-            slack.post(COMMAND, message, color=color)
-
-    # if nothing to do or we shouldn't do anything:
-    if (not bad_ports) or (not take_action):
-        return
-
-    print('cleaning...', end='')
-    clean_ports(db, bad_ports)
-    print('cleaned.')
-
-    if slack:
-        slack.post(COMMAND, 'Cleaned {} ports.'.format(len(bad_ports)), color='xkcd:chartreuse')
-
-
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -141,33 +100,41 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
+
     auth = osapi.Auth.from_env_or_args(args=args)
-
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='dirty-ports')
-    else:
-        slack = None
-
-    if args.multiport:
-        assert_single = False
-    else:
-        assert_single = True
+    slack = Slackbot(args.slack, script_name='dirty-ports') if args.slack else None
+    assert_single = False if args.multiport else True
+    take_action = args.action == 'clean'
 
     db = mysqlargs.connect()
 
-    kwargs = {
-        'db': db,
-        'auth': auth,
-        'take_action': args.action == 'clean',
-        'quiet': args.quiet,
-        'slack': slack,
-        'assert_single': assert_single,
-    }
-    if slack:
-        with slack: # log exceptions
-            cleaner(**kwargs)
-    else:
-        cleaner(**kwargs)
+    try:
+        bad_ports = identify_dirty_ports(auth, assert_single)
+
+        if bad_ports:
+            str_ports = '\n'.join(
+                ' • port `{uuid}` on node `{node_uuid}`'.format(**p)
+                for p
+                in bad_ports
+            )
+
+            if take_action:
+                clean_ports(db, bad_ports)
+                message = "Cleaned {} ports with `internal_info` data on `available` nodes:\n{}".format(
+                    len(bad_ports),
+                    str_ports
+                )
+                print(message)
+
+                if slack:
+                    slack.success(message)
+            else:
+                print("(read-only mode, not cleaning ports):\n{}".format(str_ports))
+            
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
