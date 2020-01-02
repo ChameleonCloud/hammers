@@ -68,10 +68,7 @@ def main(argv=None):
     mysqlargs.extract(args)
     auth = osapi.Auth.from_env_or_args(args=args)
 
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='floatingip-reaper')
-    else:
-        slack = None
+    slack = Slackbot(args.slack, script_name='floatingip-reaper') if args.slack else None
 
     whitelist = set()
     if args.whitelist:
@@ -81,38 +78,21 @@ def main(argv=None):
     db = mysqlargs.connect()
     db.version = query.ROCKY
 
-    kwargs = {
-        'db': db,
-        'auth': auth,
-        'grace_days': args.grace_days,
-        'whitelist': whitelist,
-        'dryrun': args.dryrun,
-    }
-    
-    if slack:
-        with slack: # log exceptions
-            result = reaper(**kwargs)
-    else:
-        result = reaper(**kwargs)  
-        
-    # slack
-    if slack and not args.dryrun:
-        if result:
-            contents = []
+    try:
+        result = reaper(db=db, auth=auth, grace_days=args.grace_days, whitelist=whitelist, dryrun=args.dryrun)
+        if result and not args.dryrun:
+            message_lines = []
             for proj, ips in result.items():
-                contents.append('Reclaimed *{} floating ips* from project {} ({:.0f} day grace-period)'.format(str(len(ips)), proj, args.grace_days))
-            message = (
-                '\n'.join(contents)
-            )
-            color = '#000000'
-        else:
-            message = (
-                'No floating ip to reclaim ({:.0f} day grace-period)'
-                .format(args.grace_days)
-            )
-            color = '#cccccc'
-
-        slack.post('floating-ip-reaper', message, color=color)
+                message_lines.append('Reclaimed *{} floating ips* from project {} ({:.0f} day grace-period)'.format(str(len(ips)), proj, args.grace_days))
+            message = '\n'.join(message_lines)
+            print(message)
+            
+            if slack:
+                slack.message(message)
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
