@@ -102,25 +102,10 @@ def send_notification(auth, lease, sender, warn_period, termination_period,
                 html.encode('utf8'))
 
 
-def reaper(auth, sender, warn_period, termination_period, delete=False):
+def find_leases_in_violation(auth, warn_period, grace_period):
     leases = leases_with_node_details(auth)
     leases_to_warn = filter(inviolation_filter(warn_period), leases)
-    leases_to_remove = filter(inviolation_filter(termination_period), leases)
-
-    if delete:
-        for lease in leases_to_warn:
-            if lease not in leases_to_remove:
-                send_notification(
-                    auth, lease, sender, warn_period, termination_period,
-                    "Your lease {} is idle and may be terminated.".format(
-                        lease['name']),
-                    _email.IDLE_LEASE_WARNING_EMAIL_BODY)
-        for lease in leases_to_remove:
-            blazar.lease_delete(auth, lease['id'])
-            send_notification(
-                auth, lease, sender, warn_period, termination_period,
-                "Your lease {} has been terminated.".format(lease['name']),
-                _email.IDLE_LEASE_TERMINATION_EMAIL_BODY)
+    leases_to_remove = filter(inviolation_filter(grace_period), leases)
 
     return leases_to_warn, leases_to_remove
 
@@ -157,14 +142,30 @@ def main(argv=None):
     assert args.grace_hours > args.warn_hours, (
         "Grace hours must be greater than warning period.")
 
-    if args.slack and (args.action == 'delete'):
-        slack = Slackbot(args.slack, script_name='unutilized_leases_reaper')
+    slack = Slackbot(args.slack, script_name='unutilized-leases-reaper') if args.slack else None
+    
+    try:
+        sender = args.sender
+        warn_period = args.warn_hours
+        grace_period = args.grace_hours
+        warn, terminate = find_leases_in_violation(auth, warn_period, grace_period)
 
-        with slack:
-            warn, terminate = reaper(auth, args.sender, args.warn_hours,
-                                     args.grace_hours, delete=True)
+        if (len(warn) + len(terminate) > 0):
+            if args.action == 'delete':
+                for lease in warn:
+                    if lease not in terminate:
+                        send_notification(
+                            auth, lease, sender, warn_period, grace_period,
+                            "Your lease {} is idle and may be terminated.".format(
+                                lease['name']),
+                            _email.IDLE_LEASE_WARNING_EMAIL_BODY)
 
-            if (len(warn) + len(terminate) > 0):
+                for lease in terminate:
+                    blazar.lease_delete(auth, lease['id'])
+                    send_notification(
+                        auth, lease, sender, warn_period, grace_period,
+                        "Your lease {} has been terminated.".format(lease['name']),
+                        _email.IDLE_LEASE_TERMINATION_EMAIL_BODY)
 
                 message = (
                     'Warned deletion of *{} idle leases* '
@@ -172,24 +173,25 @@ def main(argv=None):
                     '(Unutilized lease violation)'
                     .format(len(warn), len(terminate))
                 )
-                color = '#000000'
-            else:
-                message = ('No leases to warn or delete.')
-                color = '#cccccc'
-            slack.post('unutilized-lease-reaper', message, color=color)
 
-    elif (args.action == 'info'):
-        warn, terminate = reaper(auth, args.sender, args.warn_hours,
-                                 args.grace_hours, delete=False)
-        print("Count: {} Warn; {} Terminate".format(
-            len(warn), len(terminate)))
-        pprint(dict(
-            warn=[
-                dict(lease_id=l['id'], nodes=[n['uuid'] for n in l['nodes']])
-                for l in warn],
-            terminate=[
-                dict(lease_id=l['id'], nodes=[n['uuid'] for n in l['nodes']])
-                for l in terminate]))
+                print(message)
+
+                if slack:
+                    slack.message(message)
+            else:
+                pprint(dict(
+                    warn=[
+                        dict(lease_id=l['id'], nodes=[n['uuid'] for n in l['nodes']])
+                        for l in warn],
+                    terminate=[
+                        dict(lease_id=l['id'], nodes=[n['uuid'] for n in l['nodes']])
+                        for l in terminate]))
+        else:
+            print('No leases to warn or delete.')
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
