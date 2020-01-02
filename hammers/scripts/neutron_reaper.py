@@ -63,7 +63,7 @@ def check_lease_past_end_date(db, not_down):
                     del not_down[idx]
 
 
-def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
+def find_reapable_resources(db, auth, type_, idle_days, whitelist):
     future_projects = set()
     db_names = ['nova']
 
@@ -93,44 +93,24 @@ def reaper(db, auth, type_, idle_days, whitelist, describe=False, quiet=False):
         in project_last_seen.items()
         if days_past(last_seen) > idle_days
     ]
-    # too_idle_project_ids = [proj['id'] for proj in too_idle_projects]
-    #pprint(too_idle_project_ids)
 
     resource_query = RESOURCE_QUERY[type_]
-    command = RESOURCE_DELETE_COMMAND[type_]
 
-    n_things_to_remove = 0
-    if not describe:
-        to_delete = []
-        not_down = [] # should be empty, otherwise fail.
-        for proj_id in too_idle_project_ids:
-            # TODO replace SQL query by looking at floating IP data from
-            # the HTTP endpoint
-            for resource in resource_query(db, proj_id):
-                to_delete.append(resource['id'])
-                if (resource['status'] != 'DOWN'):
-                    not_down.append(resource)
+    to_delete = []
+    not_down = [] # should be empty, otherwise fail.
+    for proj_id in too_idle_project_ids:
+        # TODO replace SQL query by looking at floating IP data from
+        # the HTTP endpoint
+        for resource in resource_query(db, proj_id):
+            to_delete.append(resource['id'])
+            if (resource['status'] != 'DOWN'):
+                not_down.append(resource)
 
-        if not_down:
-            raise RuntimeError('error: not all {}s selected are in "DOWN" state'
-                '.\n\n{}'.format(type_, not_down))
-        for resource_id in to_delete:
-            command(auth, resource_id)
-            n_things_to_remove += 1
+    if not_down:
+        raise RuntimeError('error: not all resources selected are in "DOWN" state'
+            '.\n\n{}'.format(not_down))
 
-    else:
-        projects = collections.defaultdict(dict)
-        for proj_id in too_idle_project_ids:
-            for resource in resource_query(db, proj_id):
-                assert proj_id == resource.pop('project_id')
-                projects[proj_id][resource.pop('id')] = resource
-                n_things_to_remove += 1
-        if (not quiet) or n_things_to_remove:
-            print('Format: {project_id: {resource_id: {INFO} ...}, ...}\n')
-            pprint(dict(projects))
-            # print(json.dumps(dict(projects), indent=4))
-
-    return n_things_to_remove
+    return to_delete
 
 
 def main(argv=None):
@@ -150,8 +130,6 @@ def main(argv=None):
     parser.add_argument('-w', '--whitelist', type=str,
         help='File of project/tenant IDs/names to ignore, one per line. '
              'Ignores case and dashes.')
-    parser.add_argument('-q', '--quiet', action='store_true',
-        help='Quiet mode. No output if there was nothing to do.')
     parser.add_argument('--slack', type=str,
         help='JSON file with Slack webhook information to send a notification to')
 
@@ -167,10 +145,7 @@ def main(argv=None):
     mysqlargs.extract(args)
     auth = osapi.Authv2.from_env_or_args(args=args)
 
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='neutron-reaper')
-    else:
-        slack = None
+    slack = Slackbot(args.slack, script_name='neutron-reaper') if args.slack else None
 
     whitelist = set()
     if args.whitelist:
@@ -178,43 +153,41 @@ def main(argv=None):
             whitelist = {line for line in f}
 
     db = mysqlargs.connect()
-    db.version = query.LIBERTY
+    db.version = query.ROCKY
 
-    kwargs = {
-        'db': db,
-        'auth': auth,
-        'type_': args.type,
-        'idle_days': args.idle_days,
-        'whitelist': whitelist,
-        'describe': args.action == 'info',
-        'quiet': args.quiet,
-    }
-    if slack:
-        with slack: # log exceptions
-            remove_count = reaper(**kwargs)
-    else:
-        remove_count = reaper(**kwargs)
+    try:
+        to_delete = find_reapable_resources(db=db, auth=auth, type_=args.type, idle_days=args.idle_days, whitelist=whitelist)
 
-    if slack and (args.action == 'delete') and ((not args.quiet) or remove_count):
         thing = '{}{}'.format(
             {'ip': 'floating IP', 'port': 'port'}[args.type],
-            ('' if remove_count == 1 else 's'),
+            ('' if len(to_delete) == 1 else 's'),
         )
 
-        if remove_count > 0:
-            message = (
-                'Commanded deletion of *{} {}* ({:.0f} day grace-period)'
-                .format(remove_count, thing, args.idle_days)
-            )
-            color = '#000000'
-        else:
-            message = (
-                'No {} to delete ({:.0f} day grace-period)'
-                .format(thing, args.idle_days)
-            )
-            color = '#cccccc'
+        if to_delete:
+            if args.action == 'delete':
+                for resource_id in to_delete:
+                    RESOURCE_DELETE_COMMAND[args.type](auth, resource_id)
+                message = (
+                    'Commanded deletion of *{} {}* ({:.0f} day grace-period)'
+                    .format(len(to_delete), thing, args.idle_days)
+                )
 
-        slack.post('neutron-reaper', message, color=color)
+                print(message)
+
+                if slack:
+                    slack.message(message)
+            else:
+                print((
+                    'Found *{} {}* to delete ({:.0f} day grace-period):\n{}'
+                    .format(len(to_delete), thing, args.idle_days, to_delete)
+                ))
+        else:
+            print('No {} to delete ({:.0f} day grace-period)'.format(thing, args.idle_days))
+        
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
