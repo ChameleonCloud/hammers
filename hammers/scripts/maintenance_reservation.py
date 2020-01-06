@@ -110,7 +110,7 @@ def get_node_earliest_reserve_time(db, node_uuid, requested_hours):
         return current_time
 
 
-def reserve(sess, node, start_time, requested_hours, reason, operator, region, dryrun):
+def reserve(sess, node, start_time, requested_hours, reason, operator, dryrun):
     end_time = start_time + datetime.timedelta(hours=requested_hours)
 
     start_time_str_in_ct = start_time.replace(tzinfo=tz.gettz('UTC')).astimezone(
@@ -130,7 +130,7 @@ def reserve(sess, node, start_time, requested_hours, reason, operator, region, d
 
     if not dryrun:
         blazar = blazar_client.Client(
-            1, session=sess, service_type='reservation', region_name=region)
+            1, session=sess, service_type='reservation')
         resource_properties = '["=", "$uid", "{node_uuid}"]'.format(
             node_uuid=node.uuid)
         phys_res = {'min': "1", 'max': "1", 'hypervisor_properties': "",
@@ -226,7 +226,6 @@ def main(argv=None):
                         'requested_hours': args.estimate_hours,
                         'reason': args.reason,
                         'operator': args.operator,
-                        'region': args.os_region_name,
                         'dryrun': args.dry_run}
         try:
             start_time_str, end_time_str = reserve(**reserve_args)
