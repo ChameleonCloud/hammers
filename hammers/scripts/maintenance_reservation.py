@@ -51,7 +51,7 @@ def append_global_identity_args(parser, argv):
 
 
 def get_session(auth_url, username, password, project_name, user_domain_name='default',
-                project_domain_name='default'):
+                project_domain_name='default', region_name=None, interface=None):
     auth = v3.Password(auth_url=auth_url,
                        username=username,
                        password=password,
@@ -60,7 +60,7 @@ def get_session(auth_url, username, password, project_name, user_domain_name='de
                        project_domain_name=project_domain_name)
     sess = session.Session(auth=auth)
 
-    return sess
+    return adapter.Adapter(sess, region_name=region_name, interface=interface)
 
 
 def get_nodes(sess, node_id_or_names):
@@ -192,7 +192,9 @@ def main(argv=None):
     auth_args = {'auth_url': args.os_auth_url,
                  'username': args.os_username,
                  'password': args.os_password,
-                 'project_name': args.os_project_name}
+                 'project_name': args.os_project_name,
+                 'region_name': args.os_region_name,
+                 'interface': 'public'}
     if args.os_user_domain_name:
         auth_args['user_domain_name'] = args.os_user_domain_name
     if args.os_project_domain_name:
