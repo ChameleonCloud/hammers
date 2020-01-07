@@ -79,10 +79,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
 
-    if args.slack:
-        slack = Slackbot(args.slack)
-    else:
-        slack = None
+    slack = Slackbot(args.slack, script_name='undead-instances') if args.slack else None
 
     os_vars = {k: os.environ[k] for k in os.environ if k.startswith(OS_ENV_PREFIX)}
     if args.osrc:
@@ -130,16 +127,6 @@ def main(argv=None):
             print('  Instance: {}'.format(node['instance_uuid']))
             print('  State:    {}'.format(node['provision_state']))
 
-        if slack:
-            if unbound_instances:
-                message = ('{} nodes with dead instances (no action taken)'
-                           .format(len(unbound_instances)))
-                color = 'xkcd:orange red'
-            else:
-                message = 'No nodes with dead instances.'
-                color = 'xkcd:green'
-            slack.post(SUBCOMMAND, message, color=color)
-
     elif args.mode == 'delete':
         if not args.force_sane or args.force_insane:
             # sanity check(s) to avoid doing something stupid
@@ -154,26 +141,6 @@ def main(argv=None):
                     slack,
                 )
 
-        if slack:
-            if unbound_instances:
-                message = 'Possible Ironic nodes with nonexistant instances:\n{}'.format(
-                    '\n'.join(
-                        ' • node `{}` → instance `{}`'.format(
-                            node_instance_map[i]['uuid'],
-                            node_instance_map[i]['instance_uuid'])
-                        for i in unbound_instances
-                    )
-                )
-                color = 'xkcd:darkish red'
-            elif args.verbose:
-                message = 'No Ironic nodes visibly clinging to dead instances'
-                color = 'xkcd:light grey'
-            else:
-                message = None
-
-            if message:
-                slack.post(SUBCOMMAND, message, color=color)
-
         try:
             for inst_id in unbound_instances:
                 node = node_instance_map[inst_id]
@@ -182,18 +149,24 @@ def main(argv=None):
                     clear_node_instance_data(auth, node_id)
                 else:
                     osrest.ironic_node_set_state(auth, node_id, 'deleted')
-        except Exception as e:
-            if slack:
-                error = '{} while trying to clean instances; check logs for traceback'.format(str(e))
-                slack.post(SUBCOMMAND, error, color='xkcd:red')
-            raise
-        else:
-            if unbound_instances and slack:
-                ok_message = (
-                    'Cleaned {} instance(s).'
-                    .format(len(unbound_instances))
+
+            message = 'Fixed Ironic nodes with nonexistant instances:\n{}'.format(
+                '\n'.join(
+                    ' • node `{}` → instance `{}`'.format(
+                        node_instance_map[i]['uuid'],
+                        node_instance_map[i]['instance_uuid'])
+                    for i in unbound_instances
                 )
-                slack.post(SUBCOMMAND, ok_message, color='xkcd:chartreuse')
+            )
+
+            print(message)
+
+            if slack:
+                slack.success(message)
+        except:
+            if slack:
+                slack.exception()
+            raise
 
 
 if __name__ == '__main__':

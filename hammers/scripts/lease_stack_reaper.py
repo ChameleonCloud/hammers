@@ -141,8 +141,7 @@ def send_delete_notification(gpu_user, leases, sender):
         html.encode("utf8"))
 
 
-def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
-    """Delete stacked leases on gpu nodes."""
+def collect_user_leases(db):
     users = {}
 
     for row in query.get_advanced_reservations_by_node_type(db):
@@ -159,19 +158,7 @@ def lease_stack_reaper(db, auth, sender, describe=False, quiet=False):
 
         users[user_id].add_lease(**row)
 
-    lease_delete_count = 0
-    for user in users.values():
-        leases_in_violation = user.leases_in_violation(db)
-
-        if leases_in_violation:
-            if not describe:
-                lease_delete_count += len(leases_in_violation)
-                [lease_delete(auth, x[0]) for x in leases_in_violation]
-                send_delete_notification(user, leases_in_violation, sender)
-            else:
-                pprint(user.print_info(leases_in_violation))
-
-    return lease_delete_count
+    return users
 
 
 def main(argv=None):
@@ -206,43 +193,38 @@ def main(argv=None):
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
     auth = osapi.Auth.from_env_or_args(args=args)
-
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='lease_stack_reaper')
-    else:
-        slack = None
+    sender = args.sender
+    slack = Slackbot(args.slack, script_name='lease_stack_reaper') if args.slack else None
 
     db = mysqlargs.connect()
     db.version = query.ROCKY
 
-    kwargs = {
-        'db': db,
-        'auth': auth,
-        'describe': args.action == 'info',
-        'quiet': args.quiet,
-        'sender': args.sender
-    }
+    try:
+        users = collect_user_leases(db)
+        lease_delete_count = 0
 
-    if slack:
-        with slack:
-            remove_count = lease_stack_reaper(**kwargs)
-    else:
-        remove_count = lease_stack_reaper(**kwargs)
+        for user in users.values():
+            leases_in_violation = user.leases_in_violation(db)
 
-    if slack and (args.action == 'delete') and (
-            (not args.quiet) or remove_count):
+            if leases_in_violation:
+                if args.action == 'delete':
+                    lease_delete_count += len(leases_in_violation)
+                    [lease_delete(auth, x[0]) for x in leases_in_violation]
+                    send_delete_notification(user, leases_in_violation, sender)
+                else:
+                    pprint(user.print_info(leases_in_violation))
 
-        if remove_count > 0:
-            message = (
-                'Commanded deletion of *{} leases* '
-                '(Lease stacking restriction violated)'
-                .format(remove_count)
-            )
-            color = '#000000'
-        else:
-            message = ('No leases to delete.')
-            color = '#cccccc'
-        slack.post('lease-stack-reaper', message, color=color)
+        if lease_delete_count > 0:
+            if slack:
+                slack.message((
+                    'Commanded deletion of *{} leases* '
+                    '(Lease stacking restriction violated)'
+                    .format(lease_delete_count)
+                ))
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':

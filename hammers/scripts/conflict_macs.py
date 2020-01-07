@@ -77,20 +77,36 @@ def main(argv=None):
         return -1
 
     # Do actual work
-    with slack or nullcontext():
-        conflict_macs = find_conflicts(auth, ignore_subnets, slack=slack)
+    try:
+        conflict_macs = find_conflicts(auth, ignore_subnets)
 
         if args.mode == 'info':
-            show_info(conflict_macs, slack=slack)
+            show_info(conflict_macs)
         elif args.mode == 'delete':
-            delete(auth, conflict_macs,
-                safe=not args.force_sane, slack=slack, verbose=args.verbose)
+            if (not args.force_sane) and len(conflict_macs) > 10:
+                raise RuntimeError('(in)sanity check: thinks there are {} conflicting MACs'.format(len(conflict_macs)))
+            
+            for mac in conflict_macs.values():
+                osrest.neutron_port_delete(auth, mac['neutron_port_id'])
+
+            if slack:
+                message = 'Fixed Ironic/Neutron MAC conflicts\n{}'.format(
+                    '\n'.join(
+                        ' • Neutron Port `{neutron_port_id}` → `{mac}` ← Ironic Node `{ironic_node_id}` (Port `{ironic_port}`)'
+                        .format(**m) for m in conflict_macs.values()
+                    )
+                )
+                slack.success(message)
         else:
             print('unknown command', file=sys.stderr)
             return -1
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
-def find_conflicts(auth, ignore_subnets, slack=None):
+def find_conflicts(auth, ignore_subnets):
     nodes = osrest.ironic_nodes(auth)
     ports = osrest.ironic_ports(auth)
     neut_ports = osrest.neutron_ports(auth)
@@ -141,8 +157,6 @@ def find_conflicts(auth, ignore_subnets, slack=None):
                    'some mac addresses:\n{}'
                    .format('\n'.join(message_lines)))
         print(message, file=sys.stderr)
-        if slack:
-            slack.message(message, color='xkcd:bright red')
 
     inactive_nodes = {
         nid: node
@@ -177,7 +191,7 @@ def find_conflicts(auth, ignore_subnets, slack=None):
     return conflict_macs_info
 
 
-def show_info(conflict_macs, slack=None):
+def show_info(conflict_macs):
     # no-op
     if conflict_macs:
         print('CONFLICTS')
@@ -191,46 +205,6 @@ def show_info(conflict_macs, slack=None):
         print('Neutron Port ID:      {}'.format(mac['neutron_port_id']))
         print('Neutron Port Details:')
         pprint(mac['neutron_port_id'])
-
-    if slack:
-        if conflict_macs:
-            message = '{} conflicting MACs (no action taken)'.format(len(conflict_macs))
-            color = 'xkcd:orange red'
-        else:
-            message = 'No conflicting MACs.'
-            color = 'xkcd:green'
-        slack.message(message, color=color)
-
-
-def delete(auth, conflict_macs, verbose=False, safe=True, slack=None):
-    if safe:
-        # sanity check, make sure we don't go crazy
-        if len(conflict_macs) > 10:
-            raise RuntimeError('(in)sanity check: thinks there are {} conflicting MACs'.format(len(conflict_macs)))
-
-    if slack:
-        if conflict_macs:
-            message = 'Attempting to remove Ironic/Neutron MAC conflicts\n{}'.format(
-                '\n'.join(
-                    ' • Neutron Port `{neutron_port_id}` → `{mac}` ← Ironic Node `{ironic_node_id}` (Port `{ironic_port}`)'
-                    .format(**m) for m in conflict_macs.values()
-                )
-            )
-            color = 'xkcd:darkish red'
-        elif verbose:
-            message = 'No visible Ironic/Neutron MAC conflicts'
-            color = 'xkcd:light grey'
-        else:
-            message = None
-
-        if message:
-            slack.message(message, color=color)
-
-    for mac in conflict_macs.values():
-        osrest.neutron_port_delete(auth, mac['neutron_port_id'])
-    if conflict_macs and slack:
-        ok_message = 'Deleted {} neutron port(s)'.format(len(conflict_macs))
-        slack.message(ok_message, color='xkcd:chartreuse')
 
 
 if __name__ == '__main__':

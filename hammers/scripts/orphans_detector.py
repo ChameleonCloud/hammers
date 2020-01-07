@@ -123,56 +123,56 @@ def main(argv=None):
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
 
-    db = mysqlargs.connect()
-    db.version = args.dbversion
-
     kvm = args.kvm
 
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='orphan-detector')
-    else:
-        slack = None
+    slack = Slackbot(args.slack, script_name='orphan-detector') if args.slack else None
 
-    if kvm:
-        # at kvm site
-        os_vars = {k: os.environ[k] for k in os.environ if k.startswith('OS_')}
-        if args.osrc:
-            os_vars.update(osapi.load_osrc(args.osrc))
+    try:
+        db = mysqlargs.connect()
+        db.version = args.dbversion    
 
-        auth = v2.Password(username=os_vars['OS_USERNAME'],
-                           password=os_vars['OS_PASSWORD'],
-                           tenant_name=os_vars['OS_TENANT_NAME'],
-                           auth_url=os_vars['OS_AUTH_URL'])
-        sess = session.Session(auth=auth)
-        keystone = client.Client(session=sess)
+        if kvm:
+            # at kvm site
+            os_vars = {k: os.environ[k] for k in os.environ if k.startswith('OS_')}
+            if args.osrc:
+                os_vars.update(osapi.load_osrc(args.osrc))
 
-        orphan_instances = get_orphan_instances_kvm(db, keystone)
-    else:
-        orphan_leases_report = generate_report(get_orphan_leases(db), "-" * 45 + "ORPHAN LEASES" + "-" * 45)
-        if slack:
-            if orphan_leases_report:
-                slack.post('orphan-detector', orphan_leases_report, color='#FF0000')
-            else:
-                slack.post('orphan-detector', 'No orphan leases detected', color='#000000')
+            auth = v2.Password(username=os_vars['OS_USERNAME'],
+                            password=os_vars['OS_PASSWORD'],
+                            tenant_name=os_vars['OS_TENANT_NAME'],
+                            auth_url=os_vars['OS_AUTH_URL'])
+            sess = session.Session(auth=auth)
+            keystone = client.Client(session=sess)
+
+            orphan_instances = get_orphan_instances_kvm(db, keystone)
         else:
-            if orphan_leases_report:
-                print(orphan_leases_report)
-            else:
-                print('No orphan leases detected')
+            orphan_instances = get_orphan_instances(db)
 
-        orphan_instances = get_orphan_instances(db)
+        orphan_instances_report = generate_report(orphan_instances, "-" * 45 + "ORPHAN INSTANCES" + "-" * 45)
 
-    orphan_instances_report = generate_report(orphan_instances, "-" * 45 + "ORPHAN INSTANCES" + "-" * 45)
-    if slack:
-        if orphan_instances_report:
-            slack.post('orphan-detector', orphan_instances_report, color='#FF0000')
-        else:
-            slack.post('orphan-detector', 'No orphan instances detected', color='#000000')
-    else:
         if orphan_instances_report:
             print(orphan_instances_report)
+
+            if slack:
+                slack.error(orphan_instances_report)
         else:
             print('No orphan instances detected')
+
+        # Additionally perform lease report for CHI
+        if not kvm:
+            orphan_leases_report = generate_report(get_orphan_leases(db), "-" * 45 + "ORPHAN LEASES" + "-" * 45)
+
+            if orphan_leases_report:
+                print(orphan_leases_report)
+
+                if slack:
+                    slack.error(orphan_leases_report)
+            else:
+                print('No orphan leases detected')
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

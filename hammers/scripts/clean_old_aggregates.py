@@ -6,6 +6,7 @@ import os
 import itertools
 import re
 import requests
+import traceback
 from urllib2 import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
@@ -42,57 +43,53 @@ def aggregates_for_lease(lease):
     return [x for x in aggregates.values() if x['name'] in physical_reservation_ids]
 
 def clear_aggregates(agg_list):
-
     report = []
+    errors = []
 
     for x in agg_list:
         if x['hosts']:
             for host in x['hosts']:
                 try:                
-                    report.append("Deleting host {} from aggregate {} and returning to freepool. ".format(host, x['id']) + "\n")
                     _addremove_host(auth, 'remove_host', x['id'], host)
                     _addremove_host(auth, 'add_host', 1, host)
-                except:
+                    report.append("Deleted host {} from aggregate {} and returned to freepool. ".format(host, x['id']) + "\n")
+                except Exception as exc:
                     report.append("Unexpected error moving host {} from aggregate {} to freepool. ".format(host, x['id']) + "\n")
-                    pass
+                    errors.append(exc)
             try:
-                report.append("Deleting aggregate {}. ".format(x['id']) + "\n")
                 aggregate_delete(auth, x['id'])
-            except:
+                report.append("Deleted aggregate {}. ".format(x['id']) + "\n")
+            except Exception as exc:
                 report.append("Unexpected error deleting aggregate {}. ".format(x['id']) + "\n")
-                pass
+                errors.append(exc)
 
-    str_report = ''.join(report)
-
-    if report != []:
-      return str_report
-    else:
-      return None
+    return errors, report
 
 
 def main(argv=None):
+    slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
 
-    term_leases = [lease for lease in leases.values() if is_terminated(lease)]
+    try:
+        term_leases = [lease for lease in leases.values() if is_terminated(lease)]
+        old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
+        aggregate_list = list(itertools.chain(*old_aggregates))
+        errors, report = clear_aggregates(aggregate_list)
 
-    old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
+        if report:
+            str_report = ''.join(report)
 
-    aggregate_list = list(itertools.chain(*old_aggregates))
+            print(str_report)
 
-    agg_report = clear_aggregates(aggregate_list)
+            if slack:
+                if errors:
+                    slack.error(str_report)
+                else:
+                    slack.message(str_report)
+    except:
+        if slack:
+            slack.exception()
+        raise
 
-    print(agg_report)
-
-    if args.slack:
-        slack = Slackbot(args.slack, script_name='clean-old-aggregates')
-    else:
-        slack = None
-
-    if slack:
-        if agg_report:
-            slack.post('clean-old-aggregates', agg_report, color='#FF0000')
-        else:
-            slack.post('clean-old-aggregates', 'Aggregates are clean', color='#CCCCCC')
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-

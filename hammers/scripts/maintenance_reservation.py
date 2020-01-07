@@ -184,6 +184,8 @@ def main(argv=None):
 
     args = parser.parse_args(argv[1:])
 
+    slack = Slackbot(args.slack, script_name='maintenance-reservation') if args.slack else None
+    
     # connect to database
     mysqlargs.extract(args)
     db = mysqlargs.connect()
@@ -204,57 +206,56 @@ def main(argv=None):
     # get maint session for creating lease
     auth_args['project_name'] = 'maintenance'
     maint_sess = get_session(**auth_args)
-
-    # get node details
-    nodes = get_nodes(admin_sess, args.nodes.split(','))
-
-    report_info = {}
-    for node in nodes:
-        lease_start_time = args.start_time
-        if not lease_start_time:
-            # find the earliest reservation time for the node
-            lease_start_time = get_node_earliest_reserve_time(
-                db, node.uuid, args.estimate_hours)
-        else:
-            # convert to utc
-            lease_start_time = lease_start_time.replace(
-                tzinfo=tz.tzlocal()).astimezone(tz.gettz('UTC'))
-        # reserve
-        reserve_args = {'sess': maint_sess,
-                        'node': node,
-                        'start_time': lease_start_time,
-                        'requested_hours': args.estimate_hours,
-                        'reason': args.reason,
-                        'operator': args.operator,
-                        'dryrun': args.dry_run}
-        try:
+    
+    try:
+        # get node details
+        nodes = get_nodes(admin_sess, args.nodes.split(','))
+        
+        report_info = {}
+        for node in nodes:
+            lease_start_time = args.start_time
+            if not lease_start_time:
+                # find the earliest reservation time for the node
+                lease_start_time = get_node_earliest_reserve_time(db, node.uuid, args.estimate_hours)
+            else:
+                # convert to utc
+                lease_start_time = lease_start_time.replace(tzinfo=tz.tzlocal()).astimezone(tz.gettz('UTC'))
+            # reserve
+            reserve_args = {'sess': maint_sess,
+                            'node': node,
+                            'start_time': lease_start_time,
+                            'requested_hours': args.estimate_hours,
+                            'reason': args.reason,
+                            'operator': args.operator,
+                            'dryrun': args.dry_run}
             start_time_str, end_time_str = reserve(**reserve_args)
             report_info[node.name] = (start_time_str, end_time_str)
-        except Exception:
-            traceback.print_exc(file=sys.stdout)
 
-    # summary
-    report_lines = []
-    for key, value in report_info.items():
-        report_lines.append('Node {node_name} at {region} is under maintenance from {start_time} to {end_time}'.format(node_name=key,
-                                                                                                                       region=args.os_region_name,
-                                                                                                                       start_time=value[0],
-                                                                                                                       end_time=value[1]))
+        # summary
+        report_lines = [
+            ('Node {node_name} at {region} is under maintenance '
+                'from {start_time} to {end_time}').format(
+                node_name=key,
+                region=args.os_region_name,
+                start_time=value[0],
+                end_time=value[1]
+            ) 
+            for key, value in report_info.items()
+        ]
 
-    if args.slack and not args.dry_run:
-        slack = Slackbot(args.slack, script_name='maintenance-reservation')
-    else:
-        slack = None
-
-    if slack:
-        if len(report_lines) > 0:
-            slack.post('maintenance-reservation',
-                       '\n'.join(report_lines), color='#FF0000')
-    else:
-        if len(report_lines) > 0:
-            print('\n'.join(report_lines))
+        if report_lines:
+            report = '\n'.join(report_lines)
+            
+            print(report)
+            
+            if slack:
+                slack.message(report)
         else:
             print('nothing reserved!')
+    except:
+        if slack:
+            slack.exception()
+        raise
 
 
 if __name__ == '__main__':
