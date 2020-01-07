@@ -24,5 +24,19 @@ pipeline {
       always {
         sh 'docker logout $DOCKER_REGISTRY'
       }
+
+      success {
+        slackSend(
+          channel: "#notifications",
+          message: "*Build* of *hammers* (${env.GIT_COMMIT.substring(0, 8)}) completed successfuly. <${env.RUN_DISPLAY_URL}|View build log>",
+          color: "good"
+        )
+
+        // Trigger deploy to development environments
+        build job: 'ansible-playbook', wait: false, parameters: [
+          string(name: 'PLAYBOOK_NAME', value: 'hammers'),
+          string(name: 'JENKINS_AGENT_LABEL', value: 'ansible-uc-dev')
+        ]
+      }
     }
 }
