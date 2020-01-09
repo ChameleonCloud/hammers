@@ -61,7 +61,7 @@ class MySqlShim(object):
         rows = self.cursor.fetchmany(self.batch_size)
         while rows:
             for row in rows:
-                yield dict(list(zip(fields, row)))
+                yield dict(zip(fields, row))
             rows = self.cursor.fetchmany(self.batch_size)
 
     def _query_no_rows(self, *cargs, **ckwargs):

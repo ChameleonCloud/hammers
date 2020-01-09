@@ -101,7 +101,7 @@ def main(argv=None):
     node_instance_map = {
         n['instance_uuid']: n
         for n
-        in list(nodes.values())
+        in nodes.values()
         if n['instance_uuid'] is not None
     }
 

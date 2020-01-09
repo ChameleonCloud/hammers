@@ -132,13 +132,13 @@ def image_properties(auth, id, **kwargs):
 # </py2 kwargs compat>
     patch = []
     if add is not None:
-        for key, value in list(add.items()):
+        for key, value in add.items():
             patch.append({'op': 'add', 'path': '/{}'.format(key), 'value': value})
     if remove is not None:
         for key in remove:
             patch.append({'op': 'remove', 'path': '/{}'.format(key)})
     if replace is not None:
-        for key, value in list(replace.items()):
+        for key, value in replace.items():
             patch.append({'op': 'replace', 'path': '/{}'.format(key), 'value': value})
 
     response = requests.patch(

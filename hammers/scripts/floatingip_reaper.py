@@ -37,7 +37,7 @@ def reaper(db, auth, grace_days, whitelist, dryrun=False):
                 to_delete[project_id] = []
             to_delete[project_id].append(floating_ip_id)
             
-    for proj, ipids in list(to_delete.items()):
+    for proj, ipids in to_delete.items():
         print('Reclaim {} floating ips from project {}'.format(str(len(ipids)), proj))
         for ipid in ipids:
             print(ipid)
@@ -82,7 +82,7 @@ def main(argv=None):
         result = reaper(db=db, auth=auth, grace_days=args.grace_days, whitelist=whitelist, dryrun=args.dryrun)
         if result and not args.dryrun:
             message_lines = []
-            for proj, ips in list(result.items()):
+            for proj, ips in result.items():
                 message_lines.append('Reclaimed *{} floating ips* from project {} ({:.0f} day grace-period)'.format(str(len(ips)), proj, args.grace_days))
             message = '\n'.join(message_lines)
             print(message)

@@ -1,15 +1,6 @@
 # coding: utf-8
-
-
-try:
-    import configparser # 3.x
-except ImportError:
-    from backports import configparser # 2.x 3rd party
-try:
-    from urllib.parse import urlparse # 3.x
-except ImportError:
-    from urllib.parse import urlparse # 2.x
-
+import configparser
+from urllib.parse import urlparse
 
 from . import MyCnf, MySqlShim
 

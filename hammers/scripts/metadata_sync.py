@@ -157,7 +157,7 @@ def get_blazar_hosts(auth):
 
     # convert short-integer IDs to the UUIDs to pair with G5K
     blazar_hosts = {}
-    for host in list(blazar_hosts_shortid.values()):
+    for host in blazar_hosts_shortid.values():
         try:
             blazar_hosts[host['uid']] = host
         except KeyError:

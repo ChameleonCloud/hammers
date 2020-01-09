@@ -49,7 +49,7 @@ class User:
 
     def sort_leases_by_date(self):
         """Sort leases by date for each node."""
-        for node_type, leases in list(self.nodes.items()):
+        for node_type, leases in self.nodes.items():
             self.nodes[node_type] = list(sorted(leases, key=lambda x: x[1]))
 
     def leases_in_violation(self, db):
@@ -57,7 +57,7 @@ class User:
         self.sort_leases_by_date()
         leases_to_delete = set()
 
-        for node_type, leases in list(self.nodes.items()):
+        for node_type, leases in self.nodes.items():
             if 'gpu_' in node_type:
                 gpu_day_violation = self.find_gpu_days_limit_leases(
                     db, leases)

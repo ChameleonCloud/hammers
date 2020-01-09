@@ -40,7 +40,7 @@ def is_terminated(lease):
 # Match lease to aggregate
 def aggregates_for_lease(lease):
     physical_reservation_ids = [r['id'] for r in lease['reservations'] if r['resource_type'] == 'physical:host']
-    return [x for x in list(aggregates.values()) if x['name'] in physical_reservation_ids]
+    return [x for x in aggregates.values() if x['name'] in physical_reservation_ids]
 
 def clear_aggregates(agg_list):
     report = []
@@ -70,7 +70,7 @@ def main(argv=None):
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
 
     try:
-        term_leases = [lease for lease in list(leases.values()) if is_terminated(lease)]
+        term_leases = [lease for lease in leases.values() if is_terminated(lease)]
         old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
         aggregate_list = list(itertools.chain(*old_aggregates))
         errors, report = clear_aggregates(aggregate_list)

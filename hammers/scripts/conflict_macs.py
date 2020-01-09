@@ -86,14 +86,14 @@ def main(argv=None):
             if (not args.force_sane) and len(conflict_macs) > 10:
                 raise RuntimeError('(in)sanity check: thinks there are {} conflicting MACs'.format(len(conflict_macs)))
             
-            for mac in list(conflict_macs.values()):
+            for mac in conflict_macs.values():
                 osrest.neutron_port_delete(auth, mac['neutron_port_id'])
 
             if slack:
                 message = 'Fixed Ironic/Neutron MAC conflicts\n{}'.format(
                     '\n'.join(
                         ' • Neutron Port `{neutron_port_id}` → `{mac}` ← Ironic Node `{ironic_node_id}` (Port `{ironic_port}`)'
-                        .format(**m) for m in list(conflict_macs.values())
+                        .format(**m) for m in conflict_macs.values()
                     )
                 )
                 slack.success(message)
@@ -115,7 +115,7 @@ def find_conflicts(auth, ignore_subnets):
     serious_neut_ports = {
         pid: port
         for pid, port
-        in list(neut_ports.items())
+        in neut_ports.items()
         if not any(
             ip['subnet_id'] in ignore_subnets
             for ip
@@ -124,20 +124,20 @@ def find_conflicts(auth, ignore_subnets):
     }
 
     # mac --> uuid mappings
-    node_mac_map = {port['address']: port['node_uuid'] for port in list(ports.values())}
-    port_mac_map = {port['address']: pid for pid, port in list(ports.items())}
-    neut_mac_map = {port['mac_address']: pid for pid, port in list(serious_neut_ports.items())}
+    node_mac_map = {port['address']: port['node_uuid'] for port in ports.values()}
+    port_mac_map = {port['address']: pid for pid, port in ports.items()}
+    neut_mac_map = {port['mac_address']: pid for pid, port in serious_neut_ports.items()}
 
     neut_macs = set(neut_mac_map)
 
     # there would be fewer in the neut_mac_map if there were collisions on
     # the mac address
     if len(neut_mac_map) != len(serious_neut_ports):
-        macs = (port['mac_address'] for port in list(serious_neut_ports.values()))
+        macs = (port['mac_address'] for port in serious_neut_ports.values())
         mac_collisions = [
             (mac, count)
             for mac, count
-            in list(collections.Counter(macs).items())
+            in collections.Counter(macs).items()
             if count > 1
         ]
         message_lines = []
@@ -145,7 +145,7 @@ def find_conflicts(auth, ignore_subnets):
             bad_ports = (
                 pid
                 for pid, port
-                in list(serious_neut_ports.items())
+                in serious_neut_ports.items()
                 if port['mac_address'] == mac_collision
             )
             message_lines.append('- mac {}, ports: {}'.format(
@@ -161,16 +161,16 @@ def find_conflicts(auth, ignore_subnets):
     inactive_nodes = {
         nid: node
         for nid, node
-        in list(nodes.items())
+        in nodes.items()
         if node['instance_uuid'] is None
     }
     inactive_ports = {
         pid: port
         for pid, port
-        in list(ports.items())
+        in ports.items()
         if port['node_uuid'] in inactive_nodes
     }
-    inactive_macs = {port['address'] for port in list(inactive_ports.values())}
+    inactive_macs = {port['address'] for port in inactive_ports.values()}
 
     conflict_macs = neut_macs & inactive_macs
 
@@ -197,7 +197,7 @@ def show_info(conflict_macs):
         print('CONFLICTS')
     else:
         print('No conflicts currently.')
-    for mac in list(conflict_macs.values()):
+    for mac in conflict_macs.values():
         print('-----')
         print('MAC Address:          {}'.format(mac['mac']))
         print('Ironic Node ID:       {}'.format(mac['ironic_node_id']))

@@ -240,7 +240,7 @@ def main(argv=None):
                 start_time=value[0],
                 end_time=value[1]
             ) 
-            for key, value in list(report_info.items())
+            for key, value in report_info.items()
         ]
 
         if report_lines:

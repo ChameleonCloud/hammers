@@ -29,12 +29,12 @@ OS_ENV_PREFIX = 'OS_'
 
 def ports_by_node(ports, assert_single=False):
     node_ports = collections.defaultdict(list)
-    for port_id, port in list(ports.items()):
+    for port_id, port in ports.items():
         node_ports[port['node_uuid']].append(port)
     node_ports.default_factory = None
 
     if assert_single:
-        for node_id, ports in list(node_ports.items()):
+        for node_id, ports in node_ports.items():
             if len(ports) != 1:
                 raise ValueError('node {} has more than one port.'.format(node_id))
 

@@ -90,7 +90,7 @@ def find_reapable_resources(db, auth, type_, idle_days, whitelist):
     too_idle_project_ids = [
         proj_id
         for proj_id, last_seen
-        in list(project_last_seen.items())
+        in project_last_seen.items()
         if days_past(last_seen) > idle_days
     ]
 

@@ -70,7 +70,7 @@ def main(argv=None):
     errored_nodes = [
         n
         for n
-        in list(nodes.values())
+        in nodes.values()
         if n['provision_state'] == 'error' and not n['maintenance']
     ]
 

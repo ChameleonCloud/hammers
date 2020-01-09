@@ -9,18 +9,18 @@ def find_lease(leases, name_or_id):
     """name_or_id can be the lease name, or lease/reservation id."""
     # search lease IDs
     try:
-        return next(l for lid, l in list(leases.items()) if lid == name_or_id)
+        return next(l for lid, l in leases.items() if lid == name_or_id)
     except StopIteration:
         pass
 
     # search reservation IDs
     try:
-        return next(l for lid, l in list(leases.items()) if l['reservations'][0]['id'] == name_or_id)
+        return next(l for lid, l in leases.items() if l['reservations'][0]['id'] == name_or_id)
     except StopIteration:
         pass
 
     # search names
-        candidates = [l for lid, l in list(leases.items()) if l['name'] == name_or_id]
+        candidates = [l for lid, l in leases.items() if l['name'] == name_or_id]
         if len(candidates) > 1:
             print('warning: multiple leases match based on name: selecting one with latest end-date', file=sys.stderr)
         elif len(candidates) < 1:
@@ -44,6 +44,6 @@ def node_filter(auth, nodes):
         return osrest.ironic_node(auth, nodes[0])
 
     all_nodes = osrest.ironic_nodes(auth, details=True)
-    lease_nodes = {nid: n for nid, n in list(all_nodes.items()) if nid in nodes}
+    lease_nodes = {nid: n for nid, n in all_nodes.items() if nid in nodes}
     assert len(lease_nodes) == len(nodes)
     return lease_nodes
