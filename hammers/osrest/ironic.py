@@ -76,8 +76,9 @@ def node_update(auth, node, **kwargs):
 
 def nodes(auth, details=False):
     """Retrieves all nodes, with more info if `details` is true."""
+    path = '/v1/nodes' if not details else '/v1/nodes/detail'
     response = requests.get(
-        url=auth.endpoint('baremetal') + '/v1/nodes' + ('?detail=True' if details else ''),
+        url=auth.endpoint('baremetal') + path,
         headers={
             'X-Auth-Token': auth.token,
             'X-OpenStack-Ironic-API-Version': _API_VERSION,
