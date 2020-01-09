@@ -46,23 +46,16 @@ def node_set_state(auth, node, state):
     return response
 
 
-# def ironic_node_update(auth, node, *, add=None, remove=None, replace=None):
-# <python 2 compat>
 def node_update(auth, node, **kwargs):
     """
     Add/remove/replace properties on the node.
 
-    :param mapping add:     properties to add
-    :param iterable remove: properties to delete
     :param mapping replace: properties to replace by key
     """
-    add = kwargs.get('add')
-    remove = kwargs.get('remove')
     replace = kwargs.get('replace')
-# </python 2 compat>
     patch = []
     if replace is not None:
-        for key, value in list(replace.items()):
+        for key, value in replace.items():
             patch.append({'op': 'replace', 'path': key, 'value': value})
 
     if isinstance(node, dict):
@@ -83,9 +76,8 @@ def node_update(auth, node, **kwargs):
 
 def nodes(auth, details=False):
     """Retrieves all nodes, with more info if `details` is true."""
-    path = '/v1/nodes' if not details else '/v1/nodes/detail'
     response = requests.get(
-        url=auth.endpoint('baremetal') + path,
+        url=auth.endpoint('baremetal') + '/v1/nodes' + ('?detail=True' if details else ''),
         headers={
             'X-Auth-Token': auth.token,
             'X-OpenStack-Ironic-API-Version': _API_VERSION,

@@ -61,7 +61,7 @@ def cureable_nodes(nodes_details):
     bad_nodes = [
         nid
         for (nid, n)
-        in list(nodes_details.items())
+        in nodes_details.items()
         if (
             not n['maintenance'] and
             n['provision_state'] == 'error' and
