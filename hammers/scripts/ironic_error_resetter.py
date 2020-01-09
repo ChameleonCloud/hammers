@@ -271,7 +271,7 @@ def main(argv=None):
             message_lines.extend(' • `{}`: {} resets'.format(*r) for r in reset_ok)
         if too_many:
             message_lines.append('Skipped (already at limit)')
-            message_lines.extend(' • `{}`'.format(*r) for r in reset_ok)
+            message_lines.extend(' • `{}`'.format(*r) for r in too_many)
         if args.dry_run:
             message_lines.append('dry run, no changes actually made.')
 
