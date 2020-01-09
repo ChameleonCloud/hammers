@@ -11,7 +11,7 @@
 Displays Ironic nodes that are in an error state, but not in maintenance.
 The Ironic Error Resetter can fix some error states automatically.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import os
@@ -70,7 +70,7 @@ def main(argv=None):
     errored_nodes = [
         n
         for n
-        in nodes.values()
+        in list(nodes.values())
         if n['provision_state'] == 'error' and not n['maintenance']
     ]
 

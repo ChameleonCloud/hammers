@@ -1,5 +1,5 @@
 # coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 try:
     import configparser # 3.x
@@ -8,7 +8,7 @@ except ImportError:
 try:
     from urllib.parse import urlparse # 3.x
 except ImportError:
-    from urlparse import urlparse # 2.x
+    from urllib.parse import urlparse # 2.x
 
 
 from . import MyCnf, MySqlShim

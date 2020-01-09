@@ -10,7 +10,7 @@ then the next time it deploys to the same node, Ironic fails.
 Running with ``info`` displays what it thinks is wrong, and with ``delete``
 will clear the offending state from the nodes.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import os
@@ -101,7 +101,7 @@ def main(argv=None):
     node_instance_map = {
         n['instance_uuid']: n
         for n
-        in nodes.values()
+        in list(nodes.values())
         if n['instance_uuid'] is not None
     }
 

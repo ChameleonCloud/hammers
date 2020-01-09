@@ -1,5 +1,5 @@
 # coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import os
 import codecs
@@ -14,7 +14,7 @@ except ImportError:
         from backports import configparser
     except ImportError:
         import io
-        import ConfigParser as configparser
+        import configparser as configparser
         CP_MODERN = False
 
 __all__ = ['MyCnf', 'MYCNF_PATHS']

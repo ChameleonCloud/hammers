@@ -15,7 +15,7 @@ Required arguments, in order:
 * A project needs to be idle for ``grace-days`` days.
 '''
 #TODO: Used for KVM site only. After upgrading KVM site to OpenStack Rocky version, remove this script and use floatingip-reaper.
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import os
@@ -90,7 +90,7 @@ def find_reapable_resources(db, auth, type_, idle_days, whitelist):
     too_idle_project_ids = [
         proj_id
         for proj_id, last_seen
-        in project_last_seen.items()
+        in list(project_last_seen.items())
         if days_past(last_seen) > idle_days
     ]
 

@@ -140,7 +140,7 @@ def send(email_host, to, sender, subject=None, body=None):
         to = to.split()
 
     # remove null emails
-    to_list = filter(None, to)
+    to_list = [_f for _f in to if _f]
 
     msg = MIMEMultipart('alternative')
     msg['From'] = sender

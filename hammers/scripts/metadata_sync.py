@@ -10,7 +10,7 @@ to clean up the empty strings:
 
     DELETE FROM blazar.computehost_extra_capabilities WHERE capability_value='';
 """
-from __future__ import print_function
+
 import argparse
 import collections
 from six.moves.urllib.parse import urlparse
@@ -72,7 +72,7 @@ def _flatten_to_dots(obj, prefix=None):
         if isinstance(obj, collections.Sequence): # list-like, integer keys
             items = enumerate(obj)
         elif isinstance(obj, collections.Mapping): # dict-like, string keys
-            items = obj.items()
+            items = list(obj.items())
         else:
             raise RuntimeError('unhandlable type')
 
@@ -157,7 +157,7 @@ def get_blazar_hosts(auth):
 
     # convert short-integer IDs to the UUIDs to pair with G5K
     blazar_hosts = {}
-    for host in blazar_hosts_shortid.values():
+    for host in list(blazar_hosts_shortid.values()):
         try:
             blazar_hosts[host['uid']] = host
         except KeyError:

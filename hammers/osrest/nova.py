@@ -133,7 +133,7 @@ def availabilityzones(auth):
         headers={'X-Auth-Token': auth.token},
     )
     response.raise_for_status()
-    zones = response.json()[u'availabilityZoneInfo']
+    zones = response.json()['availabilityZoneInfo']
     return zones
 
 
@@ -143,7 +143,7 @@ def availabilityzones(auth):
         headers={'X-Auth-Token': auth.token},
     )
     response.raise_for_status()
-    zones = response.json()[u'availabilityZoneInfo']
+    zones = response.json()['availabilityZoneInfo']
     return zones
 
 

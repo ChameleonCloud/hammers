@@ -10,7 +10,7 @@ refer to the old UUIDs. This causes failures to post allocations and results in
 errors when launching instances. This detects the issue (``info``) and fixes it
 (``update``) by updating the ``uuid`` field of resource providers.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import argparse

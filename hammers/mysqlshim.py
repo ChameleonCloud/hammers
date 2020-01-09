@@ -1,5 +1,5 @@
 # coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import itertools
 
@@ -61,7 +61,7 @@ class MySqlShim(object):
         rows = self.cursor.fetchmany(self.batch_size)
         while rows:
             for row in rows:
-                yield dict(zip(fields, row))
+                yield dict(list(zip(fields, row)))
             rows = self.cursor.fetchmany(self.batch_size)
 
     def _query_no_rows(self, *cargs, **ckwargs):

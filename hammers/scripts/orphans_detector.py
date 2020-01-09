@@ -13,7 +13,7 @@ Optional arguments:
 * ``--kvm`` run on kvm site.
 
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import argparse
@@ -92,7 +92,7 @@ def generate_report(orphan_dict, title):
     report = []
     report.append(title)
     report.append("{:<45} {:<50}".format('ID','Message'))
-    for k, v in orphan_dict.iteritems():
+    for k, v in orphan_dict.items():
         report.append("{:<45} {:<50}".format(k, v))
 
     return '\n'.join(report)

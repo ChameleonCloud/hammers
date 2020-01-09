@@ -10,7 +10,7 @@ exacerbated by the Blazar client being fairly nacent.
 
     :py:mod:`ccmanage.auth` which *does* use the Python APIs.
 """
-from __future__ import print_function, absolute_import, unicode_literals
+
 
 import datetime
 import getpass

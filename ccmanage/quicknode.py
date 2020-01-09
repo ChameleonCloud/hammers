@@ -1,7 +1,7 @@
 """
 Fire up a single node on Chameleon to do something with.
 """
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import argparse
 import functools
@@ -55,12 +55,12 @@ def main(argv=None):
         server.wait()
         print_nolf('started {}...'.format(server))
         if args.no_floatingip:
-            input('Press enter to terminate lease and server.')
+            eval(input('Press enter to terminate lease and server.'))
         else:
             server.associate_floating_ip()
             print('bound ip {} to server.'.format(server.ip))
-            input('\n\'ssh cc@{}\' available.\nPress enter to terminate lease and server.'
-                .format(server.ip))
+            eval(input('\n\'ssh cc@{}\' available.\nPress enter to terminate lease and server.'
+                .format(server.ip)))
             print_nolf('Tearing down...')
     print('done.')
 

@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 
 import os
 import errno
@@ -55,7 +55,7 @@ def install(ctx):
 @task
 def publish(ctx):
     version = get_version()
-    tag_info = input('Enter tag description for "v{}":\n'.format(version))
+    tag_info = eval(input('Enter tag description for "v{}":\n'.format(version)))
 
     ctx.run('twine upload dist/*')
     ctx.run('git tag -a v{} -m "{}"'.format(version, tag_info))

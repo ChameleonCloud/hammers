@@ -1,5 +1,5 @@
 # coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
+
 import functools
 
 LIBERTY = 'liberty'
@@ -91,7 +91,7 @@ def idle_projects(db):
             else:
                 latest_for_project[row['id']] = row
 
-        results = [row for row in latest_for_project.values() if row['latest_deletion']]
+        results = [row for row in list(latest_for_project.values()) if row['latest_deletion']]
         return results
 
     else:

@@ -65,17 +65,17 @@ def inviolation_filter(hour):
 
 def leases_with_node_details(auth):
     leases = [
-        l for l in blazar.leases(auth).values()
+        l for l in list(blazar.leases(auth).values())
         if l['status'] == 'ACTIVE']
     hosts_by_node_uuid = {
         v['hypervisor_hostname']: v['id']
-        for k, v in blazar.hosts(auth).items()}
+        for k, v in list(blazar.hosts(auth).items())}
     nodes_by_host = {
         hosts_by_node_uuid[k]: v for k, v
-        in ironic.nodes(auth, details=True).items()}
+        in list(ironic.nodes(auth, details=True).items())}
     allocations = [
         x for x in blazar.host_allocations(auth)
-        if x['resource_id'] in nodes_by_host.keys()]
+        if x['resource_id'] in list(nodes_by_host.keys())]
     allocs_by_lease = defaultdict(list)
 
     for alloc in allocations:
@@ -104,8 +104,8 @@ def send_notification(auth, lease, sender, warn_period, termination_period,
 
 def find_leases_in_violation(auth, warn_period, grace_period):
     leases = leases_with_node_details(auth)
-    leases_to_warn = filter(inviolation_filter(warn_period), leases)
-    leases_to_remove = filter(inviolation_filter(grace_period), leases)
+    leases_to_warn = list(filter(inviolation_filter(warn_period), leases))
+    leases_to_remove = list(filter(inviolation_filter(grace_period), leases))
 
     return leases_to_warn, leases_to_remove
 

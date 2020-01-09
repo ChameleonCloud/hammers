@@ -1,5 +1,5 @@
 # coding: utf-8
-from __future__ import print_function
+
 import json
 import subprocess
 import sys
@@ -64,7 +64,7 @@ class Stack(object):
         return proc, stdout, stderr
 
     def create(self):
-        params = ' '.join('--parameter {}={}'.format(k, v) for k, v in self.parameters.items())
+        params = ' '.join('--parameter {}={}'.format(k, v) for k, v in list(self.parameters.items()))
         try:
             if self.path is None:
                 with tempfile.NamedTemporaryFile(mode='w') as tf:

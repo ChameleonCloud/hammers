@@ -62,7 +62,7 @@ def node_update(auth, node, **kwargs):
 # </python 2 compat>
     patch = []
     if replace is not None:
-        for key, value in replace.items():
+        for key, value in list(replace.items()):
             patch.append({'op': 'replace', 'path': key, 'value': value})
 
     if isinstance(node, dict):

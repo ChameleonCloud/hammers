@@ -21,7 +21,7 @@ Currently watches out for:
     (?s)^Failed to tear down. Error: Unable to clear binding profile for neutron port [0-9a-f-]+\. Error:.+?502 Proxy Error
     ^During sync_power_state, max retries exceeded for node [0-9a-f-]+, node state (None|power (on|off)) does not match expected state 'power (on|off)'\.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import argparse
 import datetime
@@ -61,7 +61,7 @@ def cureable_nodes(nodes_details):
     bad_nodes = [
         nid
         for (nid, n)
-        in nodes_details.items()
+        in list(nodes_details.items())
         if (
             not n['maintenance'] and
             n['provision_state'] == 'error' and
