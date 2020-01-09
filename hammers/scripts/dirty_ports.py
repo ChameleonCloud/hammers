@@ -11,7 +11,7 @@ There was/is an issue where a non-empty value in an Ironic node's port's
 node. This notifies (``info``) or ``clean``\ s up if there is info on said
 ports on nodes that are in the "available" state.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import os

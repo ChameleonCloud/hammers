@@ -7,7 +7,7 @@ import itertools
 import re
 import requests
 import traceback
-from urllib2 import HTTPError
+from urllib.error import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
 from hammers.osrest.nova import aggregate_delete

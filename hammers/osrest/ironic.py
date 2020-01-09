@@ -46,20 +46,13 @@ def node_set_state(auth, node, state):
     return response
 
 
-# def ironic_node_update(auth, node, *, add=None, remove=None, replace=None):
-# <python 2 compat>
 def node_update(auth, node, **kwargs):
     """
     Add/remove/replace properties on the node.
 
-    :param mapping add:     properties to add
-    :param iterable remove: properties to delete
     :param mapping replace: properties to replace by key
     """
-    add = kwargs.get('add')
-    remove = kwargs.get('remove')
     replace = kwargs.get('replace')
-# </python 2 compat>
     patch = []
     if replace is not None:
         for key, value in replace.items():

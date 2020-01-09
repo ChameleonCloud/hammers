@@ -118,7 +118,7 @@ def reserve(sess, node, start_time, requested_hours, reason, operator, dryrun):
     end_time_str_in_ct = end_time.replace(tzinfo=tz.gettz('UTC')).astimezone(
         tz.gettz('America/Chicago')).strftime(DATETIME_STR_FORMAT)
 
-    print((
+    print(((
         "Creating maintenance reservation for node {node_name} "
         "(id: {node_uuid}), starting {start} and ending {end} in central time"
     ).format(
@@ -126,7 +126,7 @@ def reserve(sess, node, start_time, requested_hours, reason, operator, dryrun):
         node_uuid=node.uuid,
         start=start_time_str_in_ct,
         end=end_time_str_in_ct)
-    )
+    ))
 
     if not dryrun:
         blazar = blazar_client.Client(
@@ -145,8 +145,8 @@ def reserve(sess, node, start_time, requested_hours, reason, operator, dryrun):
                                     end=end_time.strftime('%Y-%m-%d %H:%M'),
                                     reservations=[phys_res],
                                     events=[])
-        print("Lease {name} (id: {id}) created successfully!".format(
-            name=lease['name'], id=lease['id']))
+        print(("Lease {name} (id: {id}) created successfully!".format(
+            name=lease['name'], id=lease['id'])))
 
     return start_time_str_in_ct, end_time_str_in_ct
 

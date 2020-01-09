@@ -21,7 +21,7 @@ Currently watches out for:
     (?s)^Failed to tear down. Error: Unable to clear binding profile for neutron port [0-9a-f-]+\. Error:.+?502 Proxy Error
     ^During sync_power_state, max retries exceeded for node [0-9a-f-]+, node state (None|power (on|off)) does not match expected state 'power (on|off)'\.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import argparse
 import datetime
@@ -271,7 +271,7 @@ def main(argv=None):
             message_lines.extend(' • `{}`: {} resets'.format(*r) for r in reset_ok)
         if too_many:
             message_lines.append('Skipped (already at limit)')
-            message_lines.extend(' • `{}`'.format(*r) for r in too_many)
+            message_lines.extend(' • `{}`'.format(r) for r in too_many)
         if args.dry_run:
             message_lines.append('dry run, no changes actually made.')
 

@@ -15,7 +15,7 @@ Required arguments, in order:
 * A project needs to be idle for ``grace-days`` days.
 '''
 #TODO: Used for KVM site only. After upgrading KVM site to OpenStack Rocky version, remove this script and use floatingip-reaper.
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import os

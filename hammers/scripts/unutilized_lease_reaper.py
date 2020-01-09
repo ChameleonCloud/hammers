@@ -104,8 +104,8 @@ def send_notification(auth, lease, sender, warn_period, termination_period,
 
 def find_leases_in_violation(auth, warn_period, grace_period):
     leases = leases_with_node_details(auth)
-    leases_to_warn = filter(inviolation_filter(warn_period), leases)
-    leases_to_remove = filter(inviolation_filter(grace_period), leases)
+    leases_to_warn = list(filter(inviolation_filter(warn_period), leases))
+    leases_to_remove = list(filter(inviolation_filter(grace_period), leases))
 
     return leases_to_warn, leases_to_remove
 

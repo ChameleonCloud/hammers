@@ -11,7 +11,7 @@
 Displays Ironic nodes that are in an error state, but not in maintenance.
 The Ironic Error Resetter can fix some error states automatically.
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import os

@@ -150,7 +150,7 @@ def collect_user_leases(db):
         if row['project_id'] in EXCLUDED_PROJECT_IDS:
             continue
 
-        if user_id not in users.keys():
+        if user_id not in list(users.keys()):
             users[user_id] = User(
                 user_id=user_id,
                 name=row['user_name'],
@@ -203,7 +203,7 @@ def main(argv=None):
         users = collect_user_leases(db)
         lease_delete_count = 0
 
-        for user in users.values():
+        for user in list(users.values()):
             leases_in_violation = user.leases_in_violation(db)
 
             if leases_in_violation:

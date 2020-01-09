@@ -16,7 +16,7 @@ Optional arguments:
 
 NOTE: Only used for OpenStack database Rocky version!
 '''
-from __future__ import absolute_import, print_function, unicode_literals
+
 
 import sys
 import argparse
