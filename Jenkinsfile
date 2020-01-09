@@ -14,8 +14,8 @@ pipeline {
       }
       stage('build-and-publish') {
         steps {
-          sh 'docker build -t $DOCKER_REGISTRY/hammers:latest .'
-          sh 'docker push $DOCKER_REGISTRY/hammers:latest'
+          sh 'make build'
+          sh 'make publish'
         }
       }
     }
