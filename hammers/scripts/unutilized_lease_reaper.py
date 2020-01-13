@@ -98,8 +98,7 @@ def send_notification(auth, lease, sender, warn_period, termination_period,
                   lease_id=lease['id'],
                   warn_period=warn_period,
                   termination_period=termination_period))
-    _email.send(_email.get_host(), user['email'], sender, subject,
-                html.encode('utf8'))
+    _email.send(_email.get_host(), user['email'], sender, subject, html)
 
 
 def find_leases_in_violation(auth, warn_period, grace_period):

@@ -109,7 +109,7 @@ def main(argv=None):
             email_host,
             email_pack['address'],
             args.sender, subject,
-            html.encode("utf8"))
+            html)
 
     # get idle leases
     for email_pack in get_idle_leases(db):
@@ -124,7 +124,7 @@ def main(argv=None):
             email_pack['address'],
             args.sender,
             subject,
-            html.encode("utf8"))
+            html)
 
 
 if __name__ == '__main__':

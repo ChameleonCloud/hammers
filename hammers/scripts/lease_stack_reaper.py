@@ -138,7 +138,7 @@ def send_delete_notification(gpu_user, leases, sender):
         gpu_user.email,
         sender,
         subject,
-        html.encode("utf8"))
+        html)
 
 
 def collect_user_leases(db):
