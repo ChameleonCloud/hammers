@@ -276,9 +276,9 @@ def main(argv=None):
             message_lines.append('dry run, no changes actually made.')
 
         message = '\n'.join(message_lines)
-    
+
         print(message)
-        
+
         if slack and (not args.dry_run):
             slack.success(message)
     except:

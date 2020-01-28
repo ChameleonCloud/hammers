@@ -57,6 +57,19 @@ def clear_node_instance_data(auth, node, validate=True):
     })
 
 
+def find_unbound_instances(auth, nodes, instances):
+    node_instance_map = {
+        n['instance_uuid']: n
+        for n
+        in nodes.values()
+        if n['instance_uuid'] is not None
+    }
+
+    node_instance_ids = set(node_instance_map)
+    instance_ids = set(instances)
+
+    return node_instance_map, node_instance_ids - instance_ids
+
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -98,17 +111,8 @@ def main(argv=None):
     nodes = osrest.ironic_nodes(auth)
     instances = osrest.nova_instances(auth)
 
-    node_instance_map = {
-        n['instance_uuid']: n
-        for n
-        in nodes.values()
-        if n['instance_uuid'] is not None
-    }
-
-    node_instance_ids = set(node_instance_map)
-    instance_ids = set(instances)
-
-    unbound_instances = node_instance_ids - instance_ids
+    node_instance_map, unbound_instances = find_unbound_instances(
+        auth, nodes, instances)
 
     if args.mode == 'info':
         # no-op
