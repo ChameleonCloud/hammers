@@ -271,10 +271,12 @@ def main(argv=None):
             resetter = NodeResetter(auth, nid, dry_run=args.dry_run)
             try:
                 resetter.reset()
-            except TooManyResets:
-                too_many.append(nid)
-            else:
                 reset_ok.append((nid, resetter.tracker.count()))
+            # Class TooManyResets disabled since deemed unnecessary
+            #except TooManyResets:
+                #too_many.append(nid)
+            #else:
+                #reset_ok.append((nid, resetter.tracker.count()))
 
         message_lines = []
         if reset_ok:
