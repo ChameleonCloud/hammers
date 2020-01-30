@@ -1,95 +1,63 @@
-import requests
+from hammers.osrest.base import BaseAPI
 
 
 FREEPOOL_AGGREGATE_ID = 1
 RESET_STATES = ['error', 'active']
+API = BaseAPI('compute')
 
 
 def hypervisors(auth, details=False):
     path = '/os-hypervisors/detail' if details else '/os-hypervisors'
-    response = requests.get(
-        url=auth.endpoint('compute') + path,
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    data = response.json()
-    return {h['id']: h for h in data['hypervisors']}
+    response = API.get(auth, path)
+
+    return {h['id']: h for h in response.json()['hypervisors']}
 
 
 def instance(auth, id):
-    response = requests.get(
-        url=auth.endpoint('compute') + '/servers/{}'.format(id),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    server = response.json()['server']
-    return server
+    response = API.get(auth, '/servers/{}'.format(id))
+
+    return response.json()['server']
 
 
 def instances(auth, **params):
-    default_params = {'all_tenants': 1}
-    default_params.update(params)
+    params['all_tenants'] = 1
+    response = API.get(auth, '/servers', params=params)
 
-    response = requests.get(
-        url=auth.endpoint('compute') + '/servers',
-        params=default_params,
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    servers = response.json()['servers']
-    servers = {s['id']: s for s in servers}
-    return servers
+    return {s['id']: s for s in response.json()['servers']}
 
 
 def instances_details(auth, **params):
-    default_params = {'all_tenants': 1}
-    default_params.update(params)
+    params['all_tenants'] = 1
+    response = API.get(auth, '/servers/detail', params=params)
 
-    response = requests.get(
-        url=auth.endpoint('compute') + '/servers/detail',
-        params=default_params,
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    servers = response.json()['servers']
-    servers = {s['id']: s for s in servers}
-    return servers
+    return {s['id']: s for s in response.json()['servers']}
 
 
 def reset_state(auth, id, state='error'):
     if state not in RESET_STATES:
-        raise ValueError('cannot reset state to \'{}\', not one of {}'.format(state, RESET_STATES))
+        raise ValueError('cannot reset state to \'{}\', not one of {}'.format(
+            state, RESET_STATES))
 
 
 def aggregates(auth):
-    response = requests.get(
-        url=auth.endpoint('compute') + '/os-aggregates',
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    aggregates_reported = response.json()['aggregates']
-    aggregates_reported = {int(a['id']): a for a in aggregates_reported}
-    return aggregates_reported
+    response = API.get(auth, '/os-aggregates')
+
+    return {int(a['id']): a for a in response.json()['aggregates']}
 
 
 def aggregate_details(auth, agg_id):
-    response = requests.get(
-        url=auth.endpoint('compute') + '/os-aggregates/{}'.format(agg_id),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
+    response = API.get(auth, '/os-aggregates/{}'.format(agg_id))
+
     return response.json()['aggregate']
 
 
 def aggregate_delete(auth, agg_id):
     if int(agg_id) == FREEPOOL_AGGREGATE_ID:
-        raise RuntimeError('nope. (this is the freepool aggregate...bad idea.)')
+        raise RuntimeError(
+            'nope. (this is the freepool aggregate...bad idea.)')
 
-    response = requests.delete(
-        url=auth.endpoint('compute') + '/os-aggregates/{}'.format(agg_id),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
+    response = API.delete(auth, '/os-aggregates/{}'.format(agg_id))
+
     return response
 
 
@@ -97,16 +65,9 @@ def _addremove_host(auth, mode, agg_id, host_id):
     if mode not in ['add_host', 'remove_host']:
         raise ValueError('invalid mode')
 
-    response = requests.post(
-        url=auth.endpoint('compute') + '/os-aggregates/{}/action'.format(agg_id),
-        headers={'X-Auth-Token': auth.token},
-        json={
-            mode: {
-                'host': host_id
-            }
-        }
-    )
-    response.raise_for_status()
+    response = API.post(auth, '/os-aggregates/{}/action'.format(agg_id),
+                        json={mode: {'host': host_id}})
+
     return response.json()['aggregate']
 
 
@@ -118,7 +79,8 @@ def aggregate_remove_host(auth, agg_id, host_id, verify=True):
     if verify:
         agg = aggregate_details(auth, agg_id)
         if host_id not in agg['hosts']:
-            raise RuntimeError("host '{}' is not in aggregate '{}'".format(host_id, agg_id))
+            raise RuntimeError("host '{}' is not in aggregate '{}'".format(
+                host_id, agg_id))
     return _addremove_host(auth, 'remove_host', agg_id, host_id)
 
 
@@ -128,23 +90,15 @@ def aggregate_move_host(auth, host_id, from_agg_id, to_agg_id):
 
 
 def availabilityzones(auth):
-    response = requests.get(
-        url=auth.endpoint('compute') + '/os-availability-zone/detail',
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    zones = response.json()['availabilityZoneInfo']
-    return zones
+    response = API.get(auth, '/os-availability-zone/detail')
+
+    return response.json()['availabilityZoneInfo']
 
 
 def availabilityzones(auth):
-    response = requests.get(
-        url=auth.endpoint('compute') + '/os-availability-zone/detail',
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    zones = response.json()['availabilityZoneInfo']
-    return zones
+    response = API.get(auth, '/os-availability-zone/detail')
+
+    return response.json()['availabilityZoneInfo']
 
 
 __all__ = [

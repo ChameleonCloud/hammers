@@ -2,19 +2,18 @@
 Keystone API shims. Requires v3 API. See `Keystone HTTP API
 <https://developer.openstack.org/api-ref/identity/v3/>`_
 """
+from requests import HTTPError
 
-import requests
+from hammers.osrest.base import BaseAPI
+
+API = BaseAPI('identityv3')
 
 
 def project(auth, id):
     """Retrieve project by ID"""
-    response = requests.get(
-        url=auth.endpoint('identityv3') + '/projects/{}'.format(id),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    project = response.json()['project']
-    return project
+    response = API.get(auth, '/projects/{}'.format(id))
+
+    return response.json()['project']
 
 
 def projects(auth, **params):
@@ -24,15 +23,9 @@ def projects(auth, **params):
     Example params: ``name``, ``enabled``, or stuff from
     https://developer.openstack.org/api-ref/identity/v3/?expanded=list-projects-detail#list-projects
     """
-    response = requests.get(
-        url=auth.endpoint('identityv3') + '/projects'.format(id),
-        headers={'X-Auth-Token': auth.token},
-        params=params,
-    )
-    response.raise_for_status()
-    projects = response.json()['projects']
-    projects = {p['id']: p for p in projects}
-    return projects
+    response = API.get(auth, '/projects'.format(id), params=params)
+
+    return {p['id']: p for p in response.json()['projects']}
 
 
 def project_lookup(auth, name_or_id):
@@ -40,8 +33,9 @@ def project_lookup(auth, name_or_id):
     none or multiple projects found."""
     try:
         return keystone_project(auth, name_or_id)
-    except requests.HTTPError:
-        pass # failed lookup assuming it was an id, must be a name?
+    except HTTPError:
+        # failed lookup assuming it was an id, must be a name?
+        pass
 
     projects = keystone_projects(auth, name=name_or_id)
     if len(projects) < 1:
@@ -54,33 +48,23 @@ def project_lookup(auth, name_or_id):
 
 
 def user(auth, id):
-    """Retrieves information about a user by ID"""
-    response = requests.get(
-        url=auth.endpoint('identity') + '/v3/users/{}'.format(id),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
-    user = response.json()['user']
-    return user
+    """Retrieve information about a user by ID"""
+    response = API.get(auth, '/v3/users/{}'.format(id))
+
+    return response.json()['user']
 
 
 def users(auth, enabled=None, name=None):
-    """Retrieves multiple users, optionally filtered."""
+    """Retrieve multiple users, optionally filtered."""
     params = {}
     if name is not None:
         params['name'] = name
     if enabled is not None:
         params['enabled'] = enabled
 
-    response = requests.get(
-        url=auth.endpoint('identityv3') + '/users',
-        headers={'X-Auth-Token': auth.token},
-        params=params,
-    )
-    response.raise_for_status()
-    users = response.json()['users']
-    users = {u['id']: u for u in users}
-    return users
+    response = API.get(auth, '/users', params=params)
+
+    return {u['id']: u for u in response.json()['users']}
 
 
 def user_lookup(auth, name_or_id):
@@ -88,8 +72,9 @@ def user_lookup(auth, name_or_id):
     or multiple users are found."""
     try:
         return keystone_user(auth, name_or_id)
-    except requests.HTTPError:
-        pass # failed lookup assuming it was an id, must be a name?
+    except HTTPError:
+        # failed lookup assuming it was an id, must be a name?
+        pass
 
     users = keystone_users(auth, name=name_or_id)
     if len(users) < 1:

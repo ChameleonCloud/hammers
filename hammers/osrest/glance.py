@@ -2,9 +2,12 @@
 Glance API shims. See `Glance HTTP API
 <https://developer.openstack.org/api-ref/image/v2/index.html>`_
 """
-
-import requests
 import textwrap
+
+from hammers.osrest.base import BaseAPI
+
+
+API = BaseAPI('image')
 
 
 def images(auth, query=None):
@@ -16,15 +19,9 @@ def images(auth, query=None):
     For querying, accepts a dictionary. If the value is a non-string iterable,
     the key is repeated in the query with each element in the iterable.
     """
-    response = requests.get(
-        url=auth.endpoint('image') + '/v2/images',# + query,
-        params=query,
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
+    response = API.get(auth, '/v2/images', params=query)
 
-    images = response.json()['images']
-    return images
+    return response.json()['images']
 
 
 def image(auth, id=None, name=None):
@@ -40,20 +37,18 @@ def image(auth, id=None, name=None):
         if len(matches) < 1:
             raise RuntimeError('no images found with name "{}"'.format(name))
         elif len(matches) > 1:
-            raise RuntimeError('multiple images ({}) found with name "{}"'.format(len(matches), name))
+            raise RuntimeError(
+                'multiple images ({}) found with name "{}"'.format(
+                    len(matches), name))
         id = matches[0]['id']
 
-    response = requests.get(
-        url=auth.endpoint('image') + '/v2/images/{}'.format(id),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
+    response = API.get(auth, '/v2/images/{}'.format(id))
 
-    image = response.json()
-    return image
+    return response.json()
 
 
-# def image_create(auth, name, *, disk_format='qcow2', container_format='bare', visibility='private', extra=None):
+# def image_create(auth, name, *, disk_format='qcow2',
+#                  container_format='bare', visibility='private', extra=None):
 # <py2 kwargs compat>
 def image_create(auth, name, **kwargs):
     """Creates empty image entry, ready to be filled by an upload command.
@@ -75,46 +70,31 @@ def image_create(auth, name, **kwargs):
         # **extra,
     }
     data.update(extra)
-    response = requests.post(
-        url=auth.endpoint('image') + '/v2/images',
-        headers={
-            'X-Auth-Token': auth.token,
-        },
-        json=data,
-    )
-    response.raise_for_status()
+    response = API.post(auth, '/v2/images', data)
+
     return response.json()
 
 
 def image_delete(auth, id):
     """Deletes image by ID"""
-    response = requests.delete(
-        url=auth.endpoint('image') + '/v2/images/{}'.format(id),
-        headers={
-            'X-Auth-Token': auth.token,
-        },
-    )
-    response.raise_for_status()
+    response = API.delete(auth, '/v2/images/{}'.format(id))
+
     return response
 
 
 def image_tag(auth, id, tag):
-    response = requests.put(
-        url=auth.endpoint('image') + '/v2/images/{}/tags/{}'.format(id, tag),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
+    response = API.put(auth, '/v2/images/{}/tags/{}'.format(id, tag))
+
+    return response
 
 
 def image_untag(auth, id, tag):
-    response = requests.delete(
-        url=auth.endpoint('image') + '/v2/images/{}/tags/{}'.format(id, tag),
-        headers={'X-Auth-Token': auth.token},
-    )
-    response.raise_for_status()
+    response = API.delete(auth, '/v2/images/{}/tags/{}'.format(id, tag))
+
+    return response
 
 
-#def image_properties(auth, id, *, add=None, remove=None, replace=None):
+# def image_properties(auth, id, *, add=None, remove=None, replace=None):
 # <py2 kwargs compat>
 def image_properties(auth, id, **kwargs):
     """
@@ -133,23 +113,20 @@ def image_properties(auth, id, **kwargs):
     patch = []
     if add is not None:
         for key, value in add.items():
-            patch.append({'op': 'add', 'path': '/{}'.format(key), 'value': value})
+            patch.append(
+                {'op': 'add', 'path': '/{}'.format(key), 'value': value})
     if remove is not None:
         for key in remove:
             patch.append({'op': 'remove', 'path': '/{}'.format(key)})
     if replace is not None:
         for key, value in replace.items():
-            patch.append({'op': 'replace', 'path': '/{}'.format(key), 'value': value})
+            patch.append(
+                {'op': 'replace', 'path': '/{}'.format(key), 'value': value})
 
-    response = requests.patch(
-        url=auth.endpoint('image') + '/v2/images/{}'.format(id),
-        headers={
-            'X-Auth-Token': auth.token,
-            'Content-Type': 'application/openstack-images-v2.1-json-patch', # subset of full JSON patch
-        },
-        json=patch,
-    )
-    response.raise_for_status()
+    response = base.patch(auth, 'image', '/v2/images/{}'.format(id),
+                          'application/openstack-images-v2.1-json-patch',
+                          patch)
+
     return response.json()
 
 

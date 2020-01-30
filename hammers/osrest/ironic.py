@@ -3,10 +3,11 @@ Shims for Ironic. See `Ironic HTTP API Docs
 <https://developer.openstack.org/api-ref/baremetal/>`_.
 
 """
-import requests
+from hammers.osrest.base import BaseAPI
 
 
 _API_VERSION = '1.20'
+API = BaseAPI('baremetal', {'X-OpenStack-Ironic-API-Version': _API_VERSION})
 
 
 def node(auth, node):
@@ -14,35 +15,23 @@ def node(auth, node):
     if isinstance(node, dict):
         node = node['uuid']
 
-    response = requests.get(
-        url=auth.endpoint('baremetal') + '/v1/nodes/{}'.format(node),
-        headers={
-            'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': _API_VERSION,
-        },
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data
+    response = API.get(auth, '/v1/nodes/{}'.format(node))
+
+    return response.json()
 
 
 def node_set_state(auth, node, state):
     """Set provision state of `node` to `state`.
 
-    .. seealso:: `Ironic's State Machine <https://docs.openstack.org/ironic/pike/contributor/states.html>`_
+    .. seealso:: `Ironic's State Machine
+            <https://docs.openstack.org/ironic/pike/contributor/states.html>`_
     """
     if isinstance(node, dict):
         node = node['uuid']
 
-    response = requests.put(
-        url=auth.endpoint('baremetal') + '/v1/nodes/{}/states/provision'.format(node),
-        json={'target': state},
-        headers={
-            'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': _API_VERSION,
-        },
-    )
-    response.raise_for_status()
+    response = API.put(auth, '/v1/nodes/{}/states/provision'.format(node),
+                       {'target': state})
+
     return response
 
 
@@ -53,56 +42,29 @@ def node_update(auth, node, **kwargs):
     :param mapping replace: properties to replace by key
     """
     replace = kwargs.get('replace')
-    patch = []
-    if replace is not None:
-        for key, value in replace.items():
-            patch.append({'op': 'replace', 'path': key, 'value': value})
+    patch = [
+        {'op': 'replace', 'path': k, 'value': v} for k, v in replace.items()]
 
     if isinstance(node, dict):
         node = node['uuid']
 
-    response = requests.patch(
-        url=auth.endpoint('baremetal') + '/v1/nodes/{}'.format(node),
-        headers={
-            'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': _API_VERSION,
-        },
-        json=patch,
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data
+    response = API.patch(auth, '/v1/nodes/{}'.format(node), json=patch)
+
+    return response.json()
 
 
 def nodes(auth, details=False):
     """Retrieves all nodes, with more info if `details` is true."""
-    path = '/v1/nodes' if not details else '/v1/nodes/detail'
-    response = requests.get(
-        url=auth.endpoint('baremetal') + path,
-        headers={
-            'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': _API_VERSION,
-        },
-    )
-    response.raise_for_status()
-    data = response.json()
+    response = API.get(auth, '/v1/nodes/detail' if details else '/v1/nodes')
 
-    return {n['uuid']: n for n in data['nodes']}
+    return {n['uuid']: n for n in response.json()['nodes']}
 
 
 def ports(auth):
     """Retrieves all Ironic ports, returns a dictionary keyed by the port ID"""
-    response = requests.get(
-        url=auth.endpoint('baremetal') + '/v1/ports/detail',
-        headers={
-            'X-Auth-Token': auth.token,
-            'X-OpenStack-Ironic-API-Version': _API_VERSION,
-        },
-    )
-    response.raise_for_status()
-    data = response.json()
+    response = API.get(auth, '/v1/ports/detail')
 
-    return {n['uuid']: n for n in data['ports']}
+    return {n['uuid']: n for n in response.json()['ports']}
 
 
 __all__ = [
