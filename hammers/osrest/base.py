@@ -47,6 +47,6 @@ class BaseAPI:
         response = requests.patch(url=auth.endpoint(self.service) + path,
                                   headers=self.headers(auth.token,
                                                        content_type),
-                                  json=patch)
+                                  json=json)
         response.raise_for_status()
         return response

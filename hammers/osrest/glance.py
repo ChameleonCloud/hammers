@@ -123,9 +123,9 @@ def image_properties(auth, id, **kwargs):
             patch.append(
                 {'op': 'replace', 'path': '/{}'.format(key), 'value': value})
 
-    response = API.patch(auth, 'image', '/v2/images/{}'.format(id),
-                          'application/openstack-images-v2.1-json-patch',
-                          patch)
+    response = API.patch(auth, '/v2/images/{}'.format(id),
+                         'application/openstack-images-v2.1-json-patch',
+                         patch)
 
     return response.json()
 
