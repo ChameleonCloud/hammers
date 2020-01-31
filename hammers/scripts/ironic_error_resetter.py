@@ -15,16 +15,7 @@ performs on the node metadata (``extra`` field) and refuses after some number
 Currently watches out for:
 
 .. code-block:: text
-    ^Failed to tear down\. Error:
-    (?s)^Failed to tear down. Error:
-    ^During sync_power_state, max retries exceeded for node [0-9a-f-]+, node state (None|power (on|off)) does not match expected state 'power (on|off)'\.
-
-Currently disabled in favor of less strict match rules:
-
-.. code-block:: text
-    ^Failed to tear down\. Error: Failed to set node power state to power off\.
-    ^Failed to tear down\. Error: IPMI call failed: power status\.
-    (?s)^Failed to tear down. Error: Unable to clear binding profile for neutron port [0-9a-f-]+\. Error:.+?502 Proxy Error
+    ^Failed to tear down
 
 '''
 
@@ -50,21 +41,10 @@ OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'ironic-error-resetter'
 
 ERROR_MATCHERS = [re.compile(r) for r in [
-    # Commented lines currently disabled in favor of less strict match rules:
-    # r'^Failed to tear down\. Error: Failed to set node power state to power off\.',
-    # r'^Failed to tear down\. Error: IPMI call failed: power status\.',
-    # r'(?s)^Failed to tear down. Error: Unable to clear binding profile for neutron port [0-9a-f-]+\. Error:.+?502 Proxy Error',
-    r'^Failed to tear down\. Error:',
-    r'(?s)^Failed to tear down. Error:',
-    r"^During sync_power_state, max retries exceeded for node [0-9a-f-]+, node state (None|power (on|off)) does not match expected state 'power (on|off)'\.",
+    r'^Failed to tear down',
 ]]
 
 _thats_crazy = error_message_factory(SUBCOMMAND)
-
-# Class TooManyResets disabled since deemed unnecessary
-# class TooManyResets(RuntimeError):
-#     pass
-
 
 def cureable_nodes(nodes_details):
     bad_nodes = [
@@ -152,8 +132,6 @@ class NodeEventTracker(object):
 
 
 class NodeResetter(object):
-    # Class TooManyResets disabled since deemed unnecessary
-    # max_attempts = 3
     extra_key = 'hammer_error_resets'
 
     def __init__(self, auth, node_id, dry_run=False):
@@ -173,10 +151,6 @@ class NodeResetter(object):
     #     self.tracker.node = value
 
     def reset(self):
-        # Class TooManyResets disabled since deemed unnecessary
-        # if self.tracker.count() >= self.max_attempts:
-            # raise TooManyResets('maximum resets reached')
-
         if not self.dry_run:
             self.tracker.mark()
 
@@ -272,11 +246,6 @@ def main(argv=None):
             try:
                 resetter.reset()
                 reset_ok.append((nid, resetter.tracker.count()))
-            # Class TooManyResets disabled since deemed unnecessary
-            #except TooManyResets:
-                #too_many.append(nid)
-            #else:
-                #reset_ok.append((nid, resetter.tracker.count()))
 
         message_lines = []
         if reset_ok:
