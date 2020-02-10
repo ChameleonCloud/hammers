@@ -6,7 +6,7 @@ from requests import HTTPError
 
 from hammers.osrest.base import BaseAPI
 
-API = BaseAPI('identityv3')
+API = BaseAPI('identity')
 
 
 def project(auth, id):
