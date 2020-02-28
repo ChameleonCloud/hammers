@@ -11,7 +11,6 @@ to clean up the empty strings:
     DELETE FROM blazar.computehost_extra_capabilities WHERE capability_value='';
 """
 
-import argparse
 import collections
 from six.moves.urllib.parse import urlparse
 import sys
@@ -21,11 +20,12 @@ import six
 
 from hammers import osapi, osrest, query
 from hammers.mysqlargs import MySqlArgs
+from hammers.util import base_parser
 
 
 GRID_ENDPOINTS = {
-    'chi.uc.chameleoncloud.org': 'https://api.chameleoncloud.org/sites/uc/clusters/chameleon/nodes',
-    'chi.tacc.chameleoncloud.org': 'https://api.chameleoncloud.org/sites/tacc/clusters/chameleon/nodes',
+    'CHI@UC': 'https://api.chameleoncloud.org/sites/uc/clusters/chameleon/nodes',
+    'CHI@TACC': 'https://api.chameleoncloud.org/sites/tacc/clusters/chameleon/nodes',
 }
 GRID_IGNORE_PREFIX = [
     'links',
@@ -139,11 +139,12 @@ def compare_host(grid_host, blazar_host):
 
 
 def get_g5k_hosts(auth):
-    auth_host = urlparse(auth.rc['OS_AUTH_URL']).hostname
+    region = auth.rc['OS_REGION_NAME']
     try:
-        grid_endpoint = GRID_ENDPOINTS[auth_host]
+        grid_endpoint = GRID_ENDPOINTS[region]
     except KeyError:
-        raise RuntimeError("Don't know the G5K endpoint for site at {}".format(auth_host))
+        raise RuntimeError(
+            "Don't know the G5K endpoint for site {}".format(region))
 
     response = requests.get(grid_endpoint)
     data = response.json()
@@ -161,8 +162,9 @@ def get_blazar_hosts(auth):
         try:
             blazar_hosts[host['uid']] = host
         except KeyError:
-            print("WARNING: UID missing for Blazar host {}, can't pair with G5K"
-                  .format(host['id'], file=sys.stderr))
+            print(
+                "WARNING: UID missing for Blazar host {}, can't pair with G5K"
+                .format(host['id'], file=sys.stderr))
 
     return blazar_hosts
 
