@@ -1,10 +1,19 @@
 # coding: utf-8
-
-
+import argparse
 import contextlib
 import functools
 from subprocess import Popen, PIPE, check_output
 from time import time
+
+
+def base_parser(description=None):
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--slack', type=str, help=(
+        'JSON file with Slack webhook information to send a notification to'))
+    parser.add_argument('--osrc', type=str, help=(
+        'OpenStack parameters file that overrides envvars.'))
+
+    return parser
 
 
 def error_message_factory(subcommand):

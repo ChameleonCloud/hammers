@@ -12,7 +12,6 @@ config---otherwise the script would think that they are in conflict.
 '''
 
 
-import argparse
 import collections
 import configparser
 import json
@@ -25,7 +24,7 @@ import requests
 from hammers import osrest
 from hammers.osapi import load_osrc, Auth
 from hammers.slack import Slackbot
-from hammers.util import nullcontext
+from hammers.util import nullcontext, base_parser
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'conflict-macs'
@@ -35,9 +34,8 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Remove orphan ports in '
-        'Neutron referring to an inactive Ironic instance')
-
+    parser = base_parser('Remove orphan ports in Neutron referring to an '
+                         'inactive Ironic instance')
     parser.add_argument('mode', choices=['info', 'delete'],
         help='Just display data on the conflict ports or delete them')
     parser.add_argument('--ignore-subnet', type=str,
@@ -47,18 +45,13 @@ def main(argv=None):
         help='Ignore Neutron ports in the subnet(s) under the '
              '"provisioning_network" network in the "neutron" section of '
              'this configuration file.')
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
-    parser.add_argument('--osrc', type=str,
-        help='Connection parameter file. Should include password. envars used '
-        'if not provided by this file.')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--force-sane', action='store_true',
         help='Disable sanity checking (i.e. things really are that bad)')
 
     args = parser.parse_args(argv[1:])
 
-    ## Validate args
+    # Validate args
 
     slack = Slackbot(args.slack, SUBCOMMAND) if args.slack else None
     auth = Auth.from_env_or_args(args=args)
@@ -85,7 +78,7 @@ def main(argv=None):
         elif args.mode == 'delete':
             if (not args.force_sane) and len(conflict_macs) > 10:
                 raise RuntimeError('(in)sanity check: thinks there are {} conflicting MACs'.format(len(conflict_macs)))
-            
+
             for mac in conflict_macs.values():
                 osrest.neutron_port_delete(auth, mac['neutron_port_id'])
 

@@ -14,7 +14,6 @@ will clear the offending state from the nodes.
 
 import sys
 import os
-import argparse
 import json
 from pprint import pprint
 
@@ -23,7 +22,7 @@ import requests
 from hammers import osrest
 from hammers.osapi import load_osrc, Auth
 from hammers.slack import Slackbot
-from hammers.util import error_message_factory
+from hammers.util import error_message_factory, base_parser
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'undead-instances'
@@ -74,8 +73,8 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Kick Ironic nodes that '
-        'refer to a deleted/nonexistant Nova instance')
+    parser = base_parser(
+        'Kick Ironic nodes that refer to a deleted/nonexistant Nova instance')
 
     parser.add_argument('mode', choices=['info', 'delete'],
         help='Just display data on the bound nodes or delete them')

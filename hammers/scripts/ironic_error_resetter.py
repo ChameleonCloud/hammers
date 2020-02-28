@@ -20,7 +20,6 @@ Currently watches out for:
 '''
 
 
-import argparse
 import datetime
 import os
 import re
@@ -35,7 +34,7 @@ import requests
 from hammers import osrest
 from hammers.osapi import load_osrc, Auth
 from hammers.slack import Slackbot
-from hammers.util import error_message_factory
+from hammers.util import error_message_factory, base_parser
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'ironic-error-resetter'
@@ -177,16 +176,10 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Kick Ironic nodes that '
-        'are in an common/known error state')
-
+    parser = base_parser(
+        'Kick Ironic nodes that are in an common/known error state')
     parser.add_argument('mode', choices=['info', 'reset'],
         help='Just display data on the stuck nodes or reset their states')
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
-    parser.add_argument('--osrc', type=str,
-        help='Connection parameter file. Should include password. envars used '
-        'if not provided by this file.')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--dry-run', action='store_true',
         help='Dry run, don\'t actually do anything')

@@ -1,7 +1,6 @@
 import datetime
 import pytz
 import sys
-import argparse
 import os
 import itertools
 import re
@@ -12,16 +11,15 @@ from hammers.slack import Slackbot
 from hammers import osapi, osrest
 from hammers.osrest.nova import aggregate_delete
 from hammers.osrest.nova import _addremove_host
+from hammers.util import base_parser
 
 # Append "/v3" to OS_AUTH_URL, if necesary
 auth_url = os.environ["OS_AUTH_URL"]
 if not re.search("\/v3$", auth_url):
   os.environ["OS_AUTH_URL"]=auth_url+"/v3"
 
-parser = argparse.ArgumentParser(description='Clean old Nova aggregates tied to expired Blazar leases.')
-osapi.add_arguments(parser)
-parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
+parser = base_parser(
+    'Clean old Nova aggregates tied to expired Blazar leases.')
 args = parser.parse_args(sys.argv[1:])
 auth = osapi.Auth.from_env_or_args(args=args)
 
@@ -49,7 +47,7 @@ def clear_aggregates(agg_list):
     for x in agg_list:
         if x['hosts']:
             for host in x['hosts']:
-                try:                
+                try:
                     _addremove_host(auth, 'remove_host', x['id'], host)
                     _addremove_host(auth, 'add_host', 1, host)
                     report.append("Deleted host {} from aggregate {} and returned to freepool. ".format(host, x['id']) + "\n")

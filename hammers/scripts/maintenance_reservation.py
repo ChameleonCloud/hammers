@@ -1,4 +1,3 @@
-import argparse
 import datetime
 import logging
 import os
@@ -14,6 +13,7 @@ from keystoneauth1.identity import v3
 
 from hammers import MySqlArgs
 from hammers.slack import Slackbot
+from hammers.util import base_parser
 
 logging.basicConfig()
 
@@ -82,12 +82,12 @@ def get_nodes(sess, node_id_or_names):
 def get_node_earliest_reserve_time(db, node_uuid, requested_hours):
     sql = '''SELECT l.start_date AS start_date, l.end_date AS end_date
                FROM blazar.leases AS l
-               JOIN blazar.reservations AS r ON r.lease_id = l.id 
-               JOIN blazar.computehost_allocations AS ca ON r.id  = ca.reservation_id 
-               JOIN blazar.computehosts AS ch ON ch.id = ca.compute_host_id 
+               JOIN blazar.reservations AS r ON r.lease_id = l.id
+               JOIN blazar.computehost_allocations AS ca ON r.id  = ca.reservation_id
+               JOIN blazar.computehosts AS ch ON ch.id = ca.compute_host_id
                WHERE ch.hypervisor_hostname=%(node_uuid)s
                  AND l.deleted IS NULL
-                 AND l.end_date > UTC_TIMESTAMP() 
+                 AND l.end_date > UTC_TIMESTAMP()
                ORDER BY l.start_date'''
 
     current_time = datetime.datetime.utcnow()
@@ -155,8 +155,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(
-        description='Reserve nodes for maintenance')
+    parser = base_parser('Reserve nodes for maintenance')
     append_global_identity_args(parser, argv)
 
     mysqlargs = MySqlArgs({
@@ -179,13 +178,11 @@ def main(argv=None):
                         help='lease start time (YYYY-mm-DD HH:MM:SS); if not given, start at the earliest possible datetime')
     parser.add_argument('--estimate-hours', type=int, default=168,
                         help='estimated hours required for maintenance; default is 168 hours (1 week)')
-    parser.add_argument('--slack', type=str, default=None,
-                        help='JSON file with Slack webhook information to send a notification to')
 
     args = parser.parse_args(argv[1:])
 
     slack = Slackbot(args.slack, script_name='maintenance-reservation') if args.slack else None
-    
+
     # connect to database
     mysqlargs.extract(args)
     db = mysqlargs.connect()
@@ -206,11 +203,11 @@ def main(argv=None):
     # get maint session for creating lease
     auth_args['project_name'] = 'maintenance'
     maint_sess = get_session(**auth_args)
-    
+
     try:
         # get node details
         nodes = get_nodes(admin_sess, args.nodes.split(','))
-        
+
         report_info = {}
         for node in nodes:
             lease_start_time = args.start_time
@@ -239,15 +236,15 @@ def main(argv=None):
                 region=args.os_region_name,
                 start_time=value[0],
                 end_time=value[1]
-            ) 
+            )
             for key, value in report_info.items()
         ]
 
         if report_lines:
             report = '\n'.join(report_lines)
-            
+
             print(report)
-            
+
             if slack:
                 slack.message(report)
         else:

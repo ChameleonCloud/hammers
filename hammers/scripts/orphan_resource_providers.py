@@ -13,10 +13,10 @@ errors when launching instances. This detects the issue (``info``) and fixes it
 
 
 import sys
-import argparse
 
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
+from hammers.util import base_parser
 
 
 def resource_providers_fixer(db, describe=False, quiet=False):
@@ -36,7 +36,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Fixes issues with orphaned resource providers.')
+    parser = base_parser('Fixes issues with orphaned resource providers.')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -47,8 +47,6 @@ def main(argv=None):
 
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('action', choices=['info', 'update'],
                         help='Just display info or actually update them?')
 
@@ -68,9 +66,9 @@ def main(argv=None):
                     'Commanded update of *{} resource providers*'
                     .format(update_count)
                 )
-                
+
                 print(message)
-                
+
                 slack.message(message)
             elif not args.quiet:
                 print('No resource providers to delete')

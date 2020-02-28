@@ -15,7 +15,6 @@ ports on nodes that are in the "available" state.
 
 import sys
 import os
-import argparse
 import collections
 # import datetime
 # from pprint import pprint
@@ -24,6 +23,7 @@ from MySQLdb import ProgrammingError
 
 from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
+from hammers.util import base_parser
 
 OS_ENV_PREFIX = 'OS_'
 
@@ -79,7 +79,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Floating IP and port reclaimer.')
+    parser = base_parser('Floating IP and port reclaimer.')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -87,12 +87,9 @@ def main(argv=None):
         'port': 3306,
     })
     mysqlargs.inject(parser)
-    osapi.add_arguments(parser)
 
     parser.add_argument('-q', '--quiet', action='store_true',
         help='Quiet mode. No output to Slack if there was nothing to do.')
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('--multiport', action='store_true',
         help='Enable if Ironic nodes may have multiple ports associated.')
     parser.add_argument('action', choices=['info', 'clean'],
@@ -130,7 +127,7 @@ def main(argv=None):
                     slack.success(message)
             else:
                 print("(read-only mode, not cleaning ports):\n{}".format(str_ports))
-            
+
     except:
         if slack:
             slack.exception()

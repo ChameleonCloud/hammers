@@ -15,7 +15,6 @@ The Ironic Error Resetter can fix some error states automatically.
 
 import sys
 import os
-import argparse
 import collections
 import json
 from pprint import pprint
@@ -24,6 +23,7 @@ import requests
 
 from hammers import osapi, osrest
 from hammers.slack import Slackbot
+from hammers.util import base_parser
 
 OS_ENV_PREFIX = 'OS_'
 SUBCOMMAND = 'curiouser'
@@ -33,14 +33,8 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Strange things, as per '
-        'someone\'s definition of "strange".')
-
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
-    parser.add_argument('--osrc', type=str,
-        help='Connection parameter file. Should include password. envars used '
-        'if not provided by this file.')
+    parser = base_parser(
+        'Strange things, as per someone\'s definition of "strange".')
     parser.add_argument('-v', '--verbose', action='store_true')
 
     args = parser.parse_args(argv[1:])

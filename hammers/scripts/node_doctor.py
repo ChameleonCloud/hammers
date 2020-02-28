@@ -5,11 +5,11 @@
     node-doctor <node_name>
 
 '''
-import argparse
 import re
 import sys
 
 from hammers import osrest, osapi
+from hammers.util import base_parser
 
 MAINTENANCE_LEASE_REGEX = "^[a-zA-Z0-9\-]+-maintenance$"
 NODE_AILMENTS_MESSAGES = {
@@ -119,13 +119,10 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(
-        description='Diagnose node(s) for error states.')
+    parser = base_parser('Diagnose node(s) for error states.')
     parser.add_argument('--nodes', nargs="+", type=str, default=[])
     parser.add_argument('--all', action='store_true', default=False)
-    parser.add_argument('--slack', type=str)
 
-    osapi.add_arguments(parser)
     args = parser.parse_args(sys.argv[1:])
     auth = osapi.Auth.from_env_or_args(args=args)
 

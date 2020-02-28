@@ -8,7 +8,6 @@ Reclaims nodes from leases that violate terms of use.
 
 * ``info`` to just display leases or actuall delete them with ``delete``
 '''
-import argparse
 import json
 import sys
 from pprint import pprint
@@ -18,6 +17,7 @@ from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
 from hammers.osrest.blazar import lease_delete
 from hammers.notifications import _email
+from hammers.util import base_parser
 
 
 LEASES_ALLOWED = 1
@@ -165,7 +165,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Lease Stack Reaper')
+    parser = base_parser('Lease Stack Reaper')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -173,14 +173,10 @@ def main(argv=None):
         'port': 3306,
     })
     mysqlargs.inject(parser)
-    osapi.add_arguments(parser)
 
     parser.add_argument(
         '-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
-    parser.add_argument(
-        '--slack', type=str,
-        help='JSON file with Slack webhook information')
     parser.add_argument(
         'action', choices=['info', 'delete'],
         help='Just display info or actually delete them?')

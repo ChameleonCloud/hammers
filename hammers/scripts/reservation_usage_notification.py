@@ -3,7 +3,6 @@ Check and notify users about their reservation
 '''
 
 
-import argparse
 import json
 import logging
 import sys
@@ -12,6 +11,7 @@ from dateutil import tz
 
 from hammers import MySqlArgs, osapi, query
 from hammers.notifications import _email
+from hammers.util import base_parser
 
 logging.basicConfig()
 
@@ -71,8 +71,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(
-        description='Check and notify users about their reservation')
+    parser = base_parser('Check and notify users about their reservation')
     parser.add_argument(
         '--sender',
         type=str,
@@ -86,7 +85,6 @@ def main(argv=None):
         'port': 3306,
     })
     mysqlargs.inject(parser)
-    osapi.add_arguments(parser)
 
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)

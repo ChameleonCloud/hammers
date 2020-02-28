@@ -9,7 +9,6 @@ specified by the admin.
 
 * ``info`` to just display leases or actuall delete them with ``delete``
 '''
-import argparse
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pprint import pprint
@@ -20,6 +19,7 @@ from hammers import osapi
 from hammers.slack import Slackbot
 from hammers.notifications import _email
 from hammers.osrest import blazar, ironic, keystone
+from hammers.util import base_parser
 
 DEFAULT_WARN_HOURS = 6
 DEFAULT_GRACE_HOURS = 9
@@ -121,11 +121,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Unutilized Lease Reaper')
-    osapi.add_arguments(parser)
-    parser.add_argument(
-        '--slack', type=str,
-        help='JSON file with Slack webhook information')
+    parser = base_parser('Unutilized Lease Reaper')
     parser.add_argument(
         '-w', '--warn-hours', type=int,
         help='Number of hours after which to warn user.',

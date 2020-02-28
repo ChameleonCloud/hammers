@@ -19,10 +19,10 @@ NOTE: Only used for OpenStack database Rocky version!
 
 
 import sys
-import argparse
 
 from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
+from hammers.util import base_parser
 
 def reaper(db, auth, grace_days, whitelist, dryrun=False):
     to_delete = {}
@@ -30,26 +30,26 @@ def reaper(db, auth, grace_days, whitelist, dryrun=False):
     for obj in query.idle_not_reserved_floating_ips(db, grace_days):
         project_id = obj['project_id']
         floating_ip_id = obj['floating_ip_id']
-        
+
         # collect floating ips that don't belong to whitelist project
         if project_id not in whitelist:
             if project_id not in to_delete:
                 to_delete[project_id] = []
             to_delete[project_id].append(floating_ip_id)
-            
+
     for proj, ipids in to_delete.items():
         print('Reclaim {} floating ips from project {}'.format(str(len(ipids)), proj))
         for ipid in ipids:
             print(ipid)
             if not dryrun: osrest.neutron.floatingip_delete(auth, ipid)
-            
+
     return to_delete
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='floating IP reaper')
+    parser = base_parser('floating IP reaper')
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -57,10 +57,8 @@ def main(argv=None):
         'port': 3306,
     })
     mysqlargs.inject(parser)
-    osapi.add_arguments(parser)
 
     parser.add_argument('-w', '--whitelist', type=str, help='File of project/tenant IDs to ignore, one per line.')
-    parser.add_argument('--slack', type=str, help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('--grace-days', type=int, required=True, help='Number of days since last used to consider to be idle')
     parser.add_argument('--dryrun', help='dryrun mode', action='store_true')
 
@@ -86,7 +84,7 @@ def main(argv=None):
                 message_lines.append('Reclaimed *{} floating ips* from project {} ({:.0f} day grace-period)'.format(str(len(ips)), proj, args.grace_days))
             message = '\n'.join(message_lines)
             print(message)
-            
+
             if slack:
                 slack.message(message)
     except:

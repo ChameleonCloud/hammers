@@ -178,9 +178,8 @@ def main(argv=None):
         'port': 3306,
     })
 
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = base_parser(__doc__)
 
-    osapi.add_arguments(parser) # --osrc
     mysqlargs.inject(parser) # --user, --password, --host, --port
     parser.add_argument('action', choices=['info', 'update'],
         help='Info only prints out actions to be taken without doing '

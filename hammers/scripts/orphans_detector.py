@@ -16,11 +16,11 @@ Optional arguments:
 
 
 import sys
-import argparse
 import os
 
 from hammers import MySqlArgs, osapi, query
 from hammers.slack import Slackbot
+from hammers.util import base_parser
 
 from keystoneauth1.identity import v2
 from keystoneauth1 import session
@@ -102,7 +102,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    parser = argparse.ArgumentParser(description='Detects orphan leases and remove them.')
+    parser = base_parser('Detects orphan leases and remove them.')
 
     mysqlargs = MySqlArgs({
         'user': 'root',
@@ -115,8 +115,6 @@ def main(argv=None):
     parser.add_argument('-d', '--dbversion', type=str,
         help='Version of the database. Schemas differ, pick the appropriate one.',
         choices=[query.LIBERTY, query.ROCKY], default=query.ROCKY)
-    parser.add_argument('--slack', type=str,
-        help='JSON file with Slack webhook information to send a notification to')
     parser.add_argument('--kvm', help='Run at KVM site', action='store_true')
     osapi.add_arguments(parser)
 
@@ -129,7 +127,7 @@ def main(argv=None):
 
     try:
         db = mysqlargs.connect()
-        db.version = args.dbversion    
+        db.version = args.dbversion
 
         if kvm:
             # at kvm site
