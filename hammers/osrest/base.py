@@ -33,7 +33,7 @@ class BaseAPI:
 
     def put(self, auth, path, json):
         response = requests.put(url=auth.endpoint(self.service) + path,
-                                headers=self.headers(auth.token))
+                                headers=self.headers(auth.token), json=json)
         response.raise_for_status()
         return response
 

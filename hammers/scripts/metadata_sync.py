@@ -170,7 +170,7 @@ def get_blazar_hosts(auth):
 def main(argv=None):
     if argv is None:
         argv = sys.argv
-        
+
     mysqlargs = MySqlArgs({
         'user': 'root',
         'password': '',
@@ -255,7 +255,13 @@ def main(argv=None):
             continue
 
         if updates:
-            osrest.blazar.host_update(auth, bh['id'], updates)
+            try:
+                osrest.blazar.host_update(auth, bh['id'], updates)
+            except Exception as e:
+                print(e)
+                print("UPDATE SKIPPED DUE TO ERROR")
+                print("\tNODE ID: {}\n\tUpdate Detail: {}".format(
+                    bh['id'], str(updates)))
         if removals:
             for key in removals:
                 modified = query.remove_extra_capability(db, bh['id'], key)
