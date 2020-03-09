@@ -236,9 +236,8 @@ def main(argv=None):
         too_many = []
         for nid in cureable:
             resetter = NodeResetter(auth, nid, dry_run=args.dry_run)
-            try:
-                resetter.reset()
-                reset_ok.append((nid, resetter.tracker.count()))
+            resetter.reset()
+            reset_ok.append((nid, resetter.tracker.count()))
 
         message_lines = []
         if reset_ok:
