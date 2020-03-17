@@ -2,7 +2,6 @@
 
 import mysql.connector
 import os
-from time import sleep
 from hammers.slack import Slackbot
 from hammers.util import base_parser
 
