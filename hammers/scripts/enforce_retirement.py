@@ -3,20 +3,13 @@
 import mysql.connector
 import os
 from hammers.slack import Slackbot
+#from hammers.util import base_parser
+import sys
+sys.path.append('/root/fhalbach/hammers/hammers')
 from hammers.util import base_parser
 
-def mysql_conn(host, user, passwd):
-
-    # Set MYSQL Login and host, create connection
-    mydb = mysql.connector.connect(
-      host = os.environ.get(host),
-      user = os.environ.get(user),
-      passwd = os.environ.get(passwd),
-    )
-    return mydb
-
 def correct_state(cursor,slk,dryrun=False):
-
+    '''
     # Find retired nodes
     cursor.execute("SELECT uuid FROM ironic.nodes WHERE name LIKE '%retired';")
     retired_nodes = cursor.fetchall()
@@ -26,6 +19,12 @@ def correct_state(cursor,slk,dryrun=False):
         blazar_chk = "SELECT reservable FROM blazar.computehosts WHERE hypervisor_hostname = %s"
         cursor.execute(blazar_chk, [node[0]])
         if cursor.fetchall()[0][0] != 0:
+    '''
+    # Find retired nodes
+    cursor.execute("SELECT n.uuid from ironic.nodes n join blazar.computehosts ch on n.uuid = ch.hypervisor_hostname WHERE n.name LIKE '%retired' AND ch.reservable != 0;")
+    retired_nodes = cursor.fetchall()
+    print(retired_nodes)
+'''
             if not dryrun:
                 blazar_fix = "UPDATE blazar.computehosts SET reservable = '0' WHERE hypervisor_hostname = %s"
                 cursor.execute(blazar_fix, [node[0]])
@@ -36,7 +35,7 @@ def correct_state(cursor,slk,dryrun=False):
             print(mess)
             if slk:
                 slk.message(mess)
-
+'''
 def main(argv=None):
     if argv is None:
         argv = sys.argv
@@ -47,7 +46,13 @@ def main(argv=None):
     slack = Slackbot(args.slack, script_name='enforce-retirement') if args.slack else None
 
     # Open MYSQL connection
-    conn = mysql_conn('MYSQL_HOST','MYSQL_USER','MYSQL_PASSWD')
+    # Set MYSQL Login and host, create connection
+    conn = mysql.connector.connect(
+      host = os.environ.get(MYSQL_HOST),
+      user = os.environ.get(MYSQL_USER),
+      passwd = os.environ.get(MYSQL_PASSWORD),
+    )
+    
     mycursor = conn.cursor()
 
     # Find retired nodes and ensure they are non reservable in blazar
