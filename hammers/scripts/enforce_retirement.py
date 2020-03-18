@@ -35,7 +35,7 @@ def correct_state(cursor,slk,dryrun=False):
 
             print(mess)
             if slk:
-                slk.message(slack_message)
+                slk.message(mess)
 
 def main(argv=None):
     if argv is None:
