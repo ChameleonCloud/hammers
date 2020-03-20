@@ -9,14 +9,21 @@ def correct_state(cursor,slk,dryrun=False):
     # Find retired nodes
     cursor.execute("SELECT n.uuid from ironic.nodes n join blazar.computehosts ch on n.uuid = ch.hypervisor_hostname WHERE n.name LIKE '%retired' AND ch.reservable != 0;")
     retired_nodes = cursor.fetchall()
+
     for node in retired_nodes:
         if not dryrun:
             blazar_fix = "UPDATE blazar.computehosts SET reservable = '0' WHERE hypervisor_hostname = %s"
             cursor.execute(blazar_fix, [node[0]])
-            mess = ("Reverted state of node " + node[0] + " to non-reservable.")
-        else:
-            mess = ("State of retired node " + node[0] + " is reservable, run without '--dryrun' to retire.")
-        print(mess)
+
+    node_list = (', '.join(str(n[0]) for n in retired_nodes))
+
+    if not dryrun:
+        mess = ("Reverted state of node(s) " + node_list  + " to non-reservable.")
+    else:
+        mess = ("State of retired node(s) " + node_list +  " is reservable, run without '--dryrun' to retire.")
+
+    print(mess)
+    if retired_nodes:
         if slk:
             slk.message(mess)
 
