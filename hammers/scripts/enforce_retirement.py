@@ -40,7 +40,7 @@ def main(argv=None):
     mycursor = conn.cursor()
 
     # Find retired nodes and ensure they are non reservable in blazar
-    correct_state(mycursor,slack,dryrun=args.dryrun)
+    correct_state(mycursor, slack, dryrun=args.dryrun)
 
     # Close mysql connection
     conn.commit()
@@ -49,4 +49,3 @@ def main(argv=None):
 
 if __name__== "__main__":
     main()
-
