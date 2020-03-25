@@ -7,7 +7,7 @@ from hammers import MySqlArgs, query
 from hammers.slack import Slackbot
 from hammers.util import base_parser
 
-def correct_state(cursor,slk,dryrun=False):
+def correct_state(db,slk,dryrun=False):
     # Find retired nodes
     #cursor.execute("SELECT n.uuid from ironic.nodes n join blazar.computehosts ch on n.uuid = ch.hypervisor_hostname WHERE n.name LIKE '%retired' AND ch.reservable != 0;")
     #retired_nodes = cursor.fetchall()
@@ -61,7 +61,7 @@ def main(argv=None):
     #mycursor = conn.cursor()
 
     # Find retired nodes and ensure they are non reservable in blazar
-    correct_state(mycursor, slack, dryrun=args.dryrun)
+    correct_state(conn, slack, dryrun=args.dryrun)
 
     # Close mysql connection
     #conn.commit()
