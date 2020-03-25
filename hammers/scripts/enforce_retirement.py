@@ -12,11 +12,10 @@ def correct_state(db,slk,dryrun=False):
     # Find retired nodes
     retired_nodes = query.find_reservable_retired_nodes(db)
     for node in retired_nodes:
-        print(node)
         if not dryrun:
-            blazar_fix = query.blazar_set_non_reservable(db, node)
+            blazar_fix = query.blazar_set_non_reservable(db, node['uuid'])
     
-    node_list = (', '.join(str(n[0]) for n in retired_nodes))
+    node_list = (', '.join(n['uuid']) for n in retired_nodes))
 
     if not dryrun:
         mess = ("Reverted state of node(s) " + node_list  + " to non-reservable.")
@@ -24,7 +23,6 @@ def correct_state(db,slk,dryrun=False):
     else:
         mess = ("State of retired node(s) " + node_list +  " is reservable, run without '--dryrun' to retire.")
 
-    print(retired_nodes)
     if retired_nodes:
         print(mess)
         if slk:
