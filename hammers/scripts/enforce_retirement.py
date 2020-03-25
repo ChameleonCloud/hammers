@@ -10,12 +10,12 @@ from hammers.util import base_parser
 def correct_state(db,slk,dryrun=False):
     # Find retired nodes
     retired_nodes = query.find_reservable_retired_nodes(db)
-
+    print(retired_nodes)
     for node in retired_nodes:
         if not dryrun:
             blazar_fix = query.blazar_set_non_reservable(db, node)
     db.db.commit()
-
+ 
     node_list = (', '.join(str(n[0]) for n in retired_nodes))
 
     if not dryrun:
