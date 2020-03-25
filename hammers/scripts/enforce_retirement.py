@@ -10,6 +10,8 @@ from hammers.util import base_parser
 def correct_state(db,slk,dryrun=False):
     #Test
     testnode = query.test(db)
+    for node in testnode:
+        print(node)
     print(testnode)
 
     # Find retired nodes
