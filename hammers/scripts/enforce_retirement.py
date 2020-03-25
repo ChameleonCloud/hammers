@@ -8,20 +8,15 @@ from hammers.slack import Slackbot
 from hammers.util import base_parser
 
 def correct_state(db,slk,dryrun=False):
-    #Test
-    testnode = query.test(db)
-    for node in testnode:
-        print(node)
-    print(testnode)
 
     # Find retired nodes
     retired_nodes = query.find_reservable_retired_nodes(db)
-    print(retired_nodes)
     for node in retired_nodes:
+        print(node)
         if not dryrun:
             blazar_fix = query.blazar_set_non_reservable(db, node)
- 
-    node_list = (', '.join(str(n[0]) for n in retired_nodes))
+    
+    #node_list = (', '.join(str(n[0]) for n in retired_nodes))
 
     if not dryrun:
         mess = ("Reverted state of node(s) " + node_list  + " to non-reservable.")
