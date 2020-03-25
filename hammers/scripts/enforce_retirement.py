@@ -9,14 +9,10 @@ from hammers.util import base_parser
 
 def correct_state(db,slk,dryrun=False):
     # Find retired nodes
-    #cursor.execute("SELECT n.uuid from ironic.nodes n join blazar.computehosts ch on n.uuid = ch.hypervisor_hostname WHERE n.name LIKE '%retired' AND ch.reservable != 0;")
-    #retired_nodes = cursor.fetchall()
     retired_nodes = query.find_reservable_retired_nodes(db)
 
     for node in retired_nodes:
         if not dryrun:
-            #blazar_fix = "UPDATE blazar.computehosts SET reservable = '0' WHERE hypervisor_hostname = %s"
-            #cursor.execute(blazar_fix, [node[0]])
             blazar_fix = query.blazar_set_non_reservable(db, node)
     db.db.commit()
 
@@ -27,8 +23,8 @@ def correct_state(db,slk,dryrun=False):
     else:
         mess = ("State of retired node(s) " + node_list +  " is reservable, run without '--dryrun' to retire.")
 
-    print(mess)
     if retired_nodes:
+    print(mess)
         if slk:
             slk.message(mess)
 
@@ -50,23 +46,8 @@ def main(argv=None):
     conn = mysqlargs.connect()
     slack = Slackbot(args.slack, script_name='enforce-retirement') if args.slack else None
 
-    # Open MYSQL connection
-    # Set MYSQL Login and host, create connection
-    #conn = mysql.connector.connect(
-    #  host = os.environ.get('MYSQL_HOST'),
-    #  user = os.environ.get('MYSQL_USER'),
-    #  passwd = os.environ.get('MYSQL_PASSWORD'),
-    #)
-    
-    #mycursor = conn.cursor()
-
     # Find retired nodes and ensure they are non reservable in blazar
     correct_state(conn, slack, dryrun=args.dryrun)
-
-    # Close mysql connection
-    #conn.commit()
-    #conn.close()
-    #mycursor.close()
 
 if __name__== "__main__":
     main()
