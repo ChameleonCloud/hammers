@@ -3,19 +3,22 @@
 #import mysql.connector
 import os
 import sys
-from hammers import MySqlArgs
+from hammers import MySqlArgs, query
 from hammers.slack import Slackbot
 from hammers.util import base_parser
 
 def correct_state(cursor,slk,dryrun=False):
     # Find retired nodes
-    cursor.execute("SELECT n.uuid from ironic.nodes n join blazar.computehosts ch on n.uuid = ch.hypervisor_hostname WHERE n.name LIKE '%retired' AND ch.reservable != 0;")
-    retired_nodes = cursor.fetchall()
+    #cursor.execute("SELECT n.uuid from ironic.nodes n join blazar.computehosts ch on n.uuid = ch.hypervisor_hostname WHERE n.name LIKE '%retired' AND ch.reservable != 0;")
+    #retired_nodes = cursor.fetchall()
+    retired_nodes = query.find_reservable_retired_nodes(db)
 
     for node in retired_nodes:
         if not dryrun:
-            blazar_fix = "UPDATE blazar.computehosts SET reservable = '0' WHERE hypervisor_hostname = %s"
-            cursor.execute(blazar_fix, [node[0]])
+            #blazar_fix = "UPDATE blazar.computehosts SET reservable = '0' WHERE hypervisor_hostname = %s"
+            #cursor.execute(blazar_fix, [node[0]])
+            blazar_fix = query.blazar_set_non_reservable(db, node)
+    db.db.commit()
 
     node_list = (', '.join(str(n[0]) for n in retired_nodes))
 
@@ -55,15 +58,15 @@ def main(argv=None):
     #  passwd = os.environ.get('MYSQL_PASSWORD'),
     #)
     
-    mycursor = conn.cursor()
+    #mycursor = conn.cursor()
 
     # Find retired nodes and ensure they are non reservable in blazar
     correct_state(mycursor, slack, dryrun=args.dryrun)
 
     # Close mysql connection
-    conn.commit()
-    conn.close()
-    mycursor.close()
+    #conn.commit()
+    #conn.close()
+    #mycursor.close()
 
 if __name__== "__main__":
     main()
