@@ -505,7 +505,8 @@ def find_reservable_retired_nodes(db):
     """Find all nodes that are retired but mistakenly marked reservable."""
     sql = '''\
     SELECT n.uuid
-    FROM   ironic.nodes n join blazar.computehosts ch
+    FROM   ironic.nodes n
+    JOIN blazar.computehosts ch
     ON     n.uuid = ch.hypervisor_hostname
     WHERE  n.name LIKE '%retired'
        AND ch.reservable != 0
