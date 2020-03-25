@@ -8,6 +8,10 @@ from hammers.slack import Slackbot
 from hammers.util import base_parser
 
 def correct_state(db,slk,dryrun=False):
+    #Test
+    testnode = query.test(db)
+    print(testnode)
+
     # Find retired nodes
     retired_nodes = query.find_reservable_retired_nodes(db)
     print(retired_nodes)
