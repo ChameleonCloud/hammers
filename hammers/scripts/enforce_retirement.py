@@ -15,7 +15,7 @@ def correct_state(db,slk,dryrun=False):
         if not dryrun:
             blazar_fix = query.blazar_set_non_reservable(db, node['uuid'])
     
-    node_list = (', '.join(n['uuid']) for n in retired_nodes)
+    node_list = (', '.join(str(n['uuid'])) for n in retired_nodes)
 
     if not dryrun:
         mess = ("Reverted state of node(s) " + node_list  + " to non-reservable.")
