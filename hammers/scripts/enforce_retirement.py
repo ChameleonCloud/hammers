@@ -2,6 +2,7 @@
 
 #import mysql.connector
 import os
+import sys
 from hammers import MySqlArgs
 from hammers.slack import Slackbot
 from hammers.util import base_parser
@@ -34,7 +35,7 @@ def main(argv=None):
 
     parser = base_parser('Retired node state enforcer.')
     parser.add_argument('--dryrun', help='dryrun mode', action='store_true')
-    args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
     conn = mysqlargs.connect()
     slack = Slackbot(args.slack, script_name='enforce-retirement') if args.slack else None
