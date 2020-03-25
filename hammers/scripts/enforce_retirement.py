@@ -34,6 +34,13 @@ def main(argv=None):
         argv = sys.argv
 
     parser = base_parser('Retired node state enforcer.')
+    mysqlargs = MySqlArgs({
+        'user': 'root',
+        'password': '',
+        'host': 'localhost',
+        'port': 3306,
+    })
+    mysqlargs.inject(parser)
     parser.add_argument('--dryrun', help='dryrun mode', action='store_true')
     args = parser.parse_args(argv[1:])
     mysqlargs.extract(args)
