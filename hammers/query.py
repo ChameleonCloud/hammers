@@ -500,6 +500,29 @@ def get_idle_leases(db, hours):
 
     return db.query(sql, (hours,)*3, limit=None)
 
+@query
+def find_reservable_retired_nodes(db):
+    """Find all nodes that are retired but mistakenly marked reservable."""
+    sql = '''\
+    SELECT n.uuid
+    FROM   ironic.nodes n join blazar.computehosts ch
+    ON     n.uuid = ch.hypervisor_hostname
+    WHERE  n.name LIKE '%retired'
+       AND ch.reservable != 0
+    '''
+    return db.query(sql, limit=None)
+
+@query
+def blazar_set_non_reservable(db, node):
+    """Mark retired reservable nodes non-reservable in blazar"""
+    sql = '''\
+    UPDATE blazar.computehosts
+    SET reservable = '0'
+    WHERE hypervisor_hostname = %s
+    '''
+    return db.query(sql, no_rows=True)
+
+
 def main(argv):
     """Run queries!"""
     import sys
