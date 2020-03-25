@@ -523,6 +523,14 @@ def blazar_set_non_reservable(db, node):
     '''
     return db.query(sql, no_rows=True)
 
+@query
+def test(db):
+    """Find all nodes TEST."""
+    sql = '''\
+    SELECT * 
+    FROM ironic.nodes
+    '''
+    return db.query(sql, limit=1)
 
 def main(argv):
     """Run queries!"""
