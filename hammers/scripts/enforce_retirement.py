@@ -24,7 +24,7 @@ def correct_state(db,slk,dryrun=False):
         mess = ("State of retired node(s) " + node_list +  " is reservable, run without '--dryrun' to retire.")
 
     if retired_nodes:
-    print(mess)
+        print(mess)
         if slk:
             slk.message(mess)
 
