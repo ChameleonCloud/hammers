@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-#import mysql.connector
 import os
 import sys
 from hammers import MySqlArgs, query
@@ -11,19 +10,19 @@ def correct_state(db,slk,dryrun=False):
 
     # Find retired nodes
     retired_nodes = query.find_reservable_retired_nodes(db)
+    node_list = []
     for node in retired_nodes:
+        node_list.append(node['uuid'])
         if not dryrun:
             blazar_fix = query.blazar_set_non_reservable(db, node['uuid'])
     
-    node_list = (', '.join(str(n['uuid'])) for n in retired_nodes)
-
     if not dryrun:
-        mess = ("Reverted state of node(s) " + node_list  + " to non-reservable.")
+        mess = ("Reverted state of node(s) " + str(', '.join(node_list))  + " to non-reservable.")
         db.db.commit
     else:
-        mess = ("State of retired node(s) " + node_list +  " is reservable, run without '--dryrun' to retire.")
+        mess = ("State of retired node(s) " + str(', '.join(node_list)) +  " is reservable, run without '--dryrun' to retire.")
 
-    if retired_nodes:
+    if node_list:
         print(mess)
         if slk:
             slk.message(mess)
