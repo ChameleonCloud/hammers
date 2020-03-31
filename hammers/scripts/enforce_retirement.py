@@ -19,7 +19,7 @@ def correct_state(db,slk,dryrun=False):
     
     if not dryrun:
         mess = ("Reverted state of node(s) " + str(', '.join(node_list))  + " to non-reservable.")
-        db.db.commit
+        db.db.commit()
     else:
         mess = ("State of retired node(s) " + str(', '.join(node_list)) +  " is reservable, run without '--dryrun' to retire.")
 
