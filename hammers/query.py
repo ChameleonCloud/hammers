@@ -518,19 +518,10 @@ def blazar_set_non_reservable(db, node):
     """Mark retired reservable nodes non-reservable in blazar"""
     sql = '''\
     UPDATE blazar.computehosts
-    SET reservable = '0'
+    SET reservable = 0
     WHERE hypervisor_hostname = %s
     '''
-    return db.query(sql, no_rows=True)
-
-@query
-def test(db):
-    """Find all nodes TEST."""
-    sql = '''\
-    SELECT * 
-    FROM ironic.nodes
-    '''
-    return db.query(sql, limit=1)
+    return db.query(sql, args=[node], no_rows=True)
 
 def main(argv):
     """Run queries!"""
