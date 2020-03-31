@@ -37,7 +37,8 @@ setup(
             'clean-old-aggregates = hammers.scripts.clean_old_aggregates:main',
             'floatingip-reaper = hammers.scripts.floatingip_reaper:main',
             'unutilized-lease-reaper = hammers.scripts.unutilized_lease_reaper:main',
-            'node-doctor = hammers.scripts.node_doctor:main'
+            'node-doctor = hammers.scripts.node_doctor:main',
+            'retirement-enforcer = hammers.scripts.enforce_retirement:main'
         ],
     },
 
