@@ -26,7 +26,7 @@ auth = osapi.Auth.from_env_or_args(args=args)
 
 # Get aggregates and leases
 aggregates = osrest.nova.aggregates(auth)
-leases = osrest.blazar.leases(auth)
+#leases = osrest.blazar.leases(auth)
 
 def is_terminated(lease):
     dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
@@ -64,18 +64,29 @@ def clear_aggregates(agg_list):
 
     return errors, report
 
-def orphan_helper(aggregates)
+def orphan_helper(allaggs):
+    
+    hosts_from_aggs = []
+    for agg in allaggs.values():
+        for host in agg['hosts']:
+            hosts_from_aggs.append(host)
+    #print(hosts_from_aggs)
+    print(len(hosts_from_aggs))
 
-    nodes(auth, details=False)
+
+    #print(osrest.ironic.nodes(auth, details=False).keys())
+    print(len(osrest.ironic.nodes(auth, details=False).keys()))
+    sys.exit()
 
 def main(argv=None):
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
 
     try:
-        term_leases = [lease for lease in leases.values() if is_terminated(lease)]
-        old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
-        aggregate_list = list(itertools.chain(*old_aggregates))
-        errors, report = clear_aggregates(aggregate_list)
+        #term_leases = [lease for lease in leases.values() if is_terminated(lease)]
+        #old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
+        #aggregate_list = list(itertools.chain(*old_aggregates))
+        #errors, report = clear_aggregates(aggregate_list)
+        orphan_helper(aggregates)
 
         if report:
             str_report = ''.join(report)
