@@ -11,6 +11,7 @@ from hammers.slack import Slackbot
 from hammers import osapi, osrest
 from hammers.osrest.nova import aggregate_delete
 from hammers.osrest.nova import _addremove_host
+from hammers.osrest.ironic import nodes
 from hammers.util import base_parser
 
 # Append "/v3" to OS_AUTH_URL, if necesary
@@ -63,6 +64,9 @@ def clear_aggregates(agg_list):
 
     return errors, report
 
+def orphan_helper(aggregates)
+
+    nodes(auth, details=False)
 
 def main(argv=None):
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
