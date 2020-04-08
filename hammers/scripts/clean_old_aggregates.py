@@ -6,12 +6,14 @@ import itertools
 import re
 import requests
 import traceback
+import dateutil.parser
+from datetime import datetime
 from urllib.error import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
-from hammers.osrest.nova import aggregate_delete
-from hammers.osrest.nova import _addremove_host
-from hammers.osrest.ironic import nodes
+#from hammers.osrest.nova import aggregate_delete, _addremove_host
+#from hammers.osrest.ironic import nodes
+#from hammers.osrest.blazar import hosts,host_allocations,lease
 from hammers.util import base_parser
 
 # Append "/v3" to OS_AUTH_URL, if necesary
@@ -65,17 +67,50 @@ def clear_aggregates(agg_list):
     return errors, report
 
 def orphan_helper(allaggs):
-    
+   
+    #for h in osrest.blazar.hosts(auth).values():
+    #sys.exit()
+    '''
+    allocdate = ([x['reservations'][0]['start_date'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == '341'][0])
+    print(allocdate)
+    print(datetime.now())
+    print(type(datetime.now()))
+    adate = dateutil.parser.parse(allocdate)
+    print(adate, type(adate))
+    print(adate > datetime.now())
+    print(adate < datetime.now())
+    sys.exit()
+    '''
+    # Find all hosts currently in aggregates
     hosts_from_aggs = []
     for agg in allaggs.values():
         for host in agg['hosts']:
             hosts_from_aggs.append(host)
+
+# If ironic host not in aggregate hosts, check if associated with current blazar host allocation and place it in its aggregate. Else send to freepool.
+    ironic_hosts = osrest.ironic.nodes(auth, details=False).keys()
+    for host in ironic_hosts:
+        if host not in hosts_from_aggs:
+            host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
+            active_res = [x['reservations'][0]['id'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == host_id and dateutil.parser.parse(x['reservations'][0]['start_date']) < datetime.now() and dateutil.parser.parse(x['reservations'][0]['end_date']) > datetime.now()][0]
+            print(active_res)
+            target_agg = [aggr['id'] for aggr in allaggs.values() if aggr['name'] == active_res][0]
+            if target_agg:
+                print(target_agg)
+                #_addremove_host(auth, add_host, target_agg, host)
+            else:
+                print(host)
+                _addremove_host(auth, add_host, 'freepool', host)
     #print(hosts_from_aggs)
-    print(len(hosts_from_aggs))
+    #print(len(hosts_from_aggs))
 
 
     #print(osrest.ironic.nodes(auth, details=False).keys())
-    print(len(osrest.ironic.nodes(auth, details=False).keys()))
+    #print(len(osrest.ironic.nodes(auth, details=False).keys()))
+    
+    #print(osrest.blazar.lease(auth, '9f22da60-abf6-4a63-ab18-16f0019bf61c'))
+    
+    
     sys.exit()
 
 def main(argv=None):
