@@ -28,6 +28,9 @@ EXCLUDED_PROJECT_IDS = [
     '4ffe61cf850d4b45aef86b46411d33e1',
     'd9faac3973a847f1b718fa765fe312e2',
     'a40a60192c1b42ad9dcb40666663b0e3'] ##LSS Institute
+EXCLUDED_NODE_TYPES = [
+    'compute_haswell'
+]
 
 
 class User:
@@ -58,6 +61,9 @@ class User:
         leases_to_delete = set()
 
         for node_type, leases in self.nodes.items():
+            if node_type in EXCLUDED_NODE_TYPES:
+                continue
+            
             if 'gpu_' in node_type:
                 gpu_day_violation = self.find_gpu_days_limit_leases(
                     db, leases)
