@@ -68,49 +68,32 @@ def clear_aggregates(agg_list):
 
 def orphan_helper(allaggs):
    
-    #for h in osrest.blazar.hosts(auth).values():
-    #sys.exit()
-    '''
-    allocdate = ([x['reservations'][0]['start_date'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == '341'][0])
-    print(allocdate)
-    print(datetime.now())
-    print(type(datetime.now()))
-    adate = dateutil.parser.parse(allocdate)
-    print(adate, type(adate))
-    print(adate > datetime.now())
-    print(adate < datetime.now())
-    sys.exit()
-    '''
     # Find all hosts currently in aggregates
     hosts_from_aggs = []
     for agg in allaggs.values():
         for host in agg['hosts']:
             hosts_from_aggs.append(host)
 
-# If ironic host not in aggregate hosts, check if associated with current blazar host allocation and place it in its aggregate. Else send to freepool.
+    # If ironic host not in aggregate hosts, check if associated with current blazar host allocation and place it in its aggregate. Else send to freepool.
     ironic_hosts = osrest.ironic.nodes(auth, details=False).keys()
+    orph_reports = [] 
     for host in ironic_hosts:
         if host not in hosts_from_aggs:
             host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
-            active_res = [x['reservations'][0]['id'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == host_id and dateutil.parser.parse(x['reservations'][0]['start_date']) < datetime.now() and dateutil.parser.parse(x['reservations'][0]['end_date']) > datetime.now()][0]
-            print(active_res)
-            target_agg = [aggr['id'] for aggr in allaggs.values() if aggr['name'] == active_res][0]
-            if target_agg:
+            print(host_id)
+            try:
+                active_res = [x['reservations'][0]['id'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == host_id and dateutil.parser.parse(x['reservations'][0]['start_date']) < datetime.now() and dateutil.parser.parse(x['reservations'][0]['end_date']) > datetime.now()][0]
+                print(active_res)
+                target_agg = [aggr['id'] for aggr in allaggs.values() if aggr['name'] == active_res][0]
                 print(target_agg)
                 #_addremove_host(auth, add_host, target_agg, host)
-            else:
-                print(host)
-                _addremove_host(auth, add_host, 'freepool', host)
-    #print(hosts_from_aggs)
-    #print(len(hosts_from_aggs))
+                orph_reports.append("Added node " + host + " to aggregate " + str(target_agg) + ".")
+            except IndexError:
+                #_addremove_host(auth, add_host, 'freepool', host)
+                orph_reports.append("Added node " + host + " to freepool")
+    
+    print(orph_reports)
 
-
-    #print(osrest.ironic.nodes(auth, details=False).keys())
-    #print(len(osrest.ironic.nodes(auth, details=False).keys()))
-    
-    #print(osrest.blazar.lease(auth, '9f22da60-abf6-4a63-ab18-16f0019bf61c'))
-    
-    
     sys.exit()
 
 def main(argv=None):
