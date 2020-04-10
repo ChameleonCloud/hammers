@@ -66,6 +66,25 @@ def clear_aggregates(agg_list):
 
     return errors, report
 
+def orphan_find(allaggs):
+
+    # Find all hosts currently in aggregates
+    hosts_from_aggs = []
+    for agg in allaggs.values():
+        for host in agg['hosts']:
+            hosts_from_aggs.append(host)
+
+    # Make list of ironic hosts not in any aggregate
+    ironic_hosts = osrest.ironic.nodes(auth, details=False).keys()
+    orphans = []
+    for host in ironic_hosts:
+        if host not in hosts_from_aggs:
+            host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
+            print(host_id)
+            orphans.append(host_id)
+    
+    return(orphans)
+
 def orphan_helper(allaggs):
    
     # Find all hosts currently in aggregates
@@ -104,7 +123,8 @@ def main(argv=None):
         #old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
         #aggregate_list = list(itertools.chain(*old_aggregates))
         #errors, report = clear_aggregates(aggregate_list)
-        orphan_helper(aggregates)
+        orphan_list = orphan_find(aggregates)
+        #orphan_helper(aggregates)
 
         if report:
             str_report = ''.join(report)
