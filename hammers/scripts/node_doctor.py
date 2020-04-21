@@ -5,6 +5,7 @@
     node-doctor <node_name>
 
 '''
+from datetime import datetime, timedelta
 import re
 import sys
 
@@ -16,6 +17,20 @@ NODE_AILMENTS_MESSAGES = {
     "error_state": ("""
         ERROR: node in an error state
         Indicates node has an error state."""),
+    "stuck_deleting": ("""
+        ERROR: node is stuck in "deleting" state.
+        This indicates that the node failed to tear down when its instance was
+        deleted; this can happen when network connectivity between Ironic and
+        Neutron (or other services) is disrupted during an instance deletion.
+
+        The only known remediation currently is to directly update the DB:
+
+        mysql ironic -e "update nodes
+            set provision_state='available',
+                target_provision_state=null,
+                provision_updated_at=current_timestamp()
+            where uuid='$node_uuid';"
+        """),
     "maintenance_state_error": ("""
         ERROR: node in maintenance state
         Indicates node is in a maintenance state but does not have
@@ -60,6 +75,17 @@ def node_in_error_state(nodes):
             nodes[nid]['ailments'].append("error_state")
 
 
+def node_stuck_deleting(nodes):
+    expected_time_in_deleting = timedelta(minutes=2)
+    threshold = datetime.now() - expected_time_in_deleting
+
+    for nid, node in nodes.items():
+        if (node["provision_state"] == "deleting" and
+            node["provision_updated_at"] < threshold and
+            node["last_error"] is not None):
+            nodes[nid]["ailments"].append("stuck_deleting")
+
+
 def node_maintenance_state_error(auth, nodes):
     pattern = re.compile(MAINTENANCE_LEASE_REGEX)
     maintenance_leases = {
@@ -73,7 +99,6 @@ def node_maintenance_state_error(auth, nodes):
 
 
 def node_not_in_freepool(auth, nodes):
-
     freepool = osrest.nova.aggregate_details(auth, '1')
 
     for node_id in available_nodes(nodes):
@@ -121,7 +146,6 @@ def main(argv=None):
 
     parser = base_parser('Diagnose node(s) for error states.')
     parser.add_argument('--nodes', nargs="+", type=str, default=[])
-    parser.add_argument('--all', action='store_true', default=False)
 
     args = parser.parse_args(sys.argv[1:])
     auth = osapi.Auth.from_env_or_args(args=args)
@@ -129,9 +153,10 @@ def main(argv=None):
     nodes = {
         nid: dict(n, **{"ailments": []}) for nid, n
         in osrest.ironic_nodes(auth, details=True).items()
-        if n['name'] in args.nodes or args.all}
+        if n['name'] in args.nodes or not args.nodes}
 
     node_in_error_state(nodes)
+    node_stuck_deleting(nodes)
     node_maintenance_state_error(auth, nodes)
     node_not_in_freepool(auth, nodes)
     node_undead_instance(auth, nodes)
