@@ -10,7 +10,7 @@ import re
 import sys
 
 from hammers import osrest, osapi
-from hammers.util import base_parser, parse_datestr
+from hammers.util import base_parser, now_utc, parse_datestr
 
 MAINTENANCE_LEASE_REGEX = "^[a-zA-Z0-9\-]+-maintenance$"
 NODE_AILMENTS_MESSAGES = {
@@ -77,7 +77,7 @@ def node_in_error_state(nodes):
 
 def node_stuck_deleting(nodes):
     expected_time_in_deleting = timedelta(minutes=2)
-    threshold = datetime.now() - expected_time_in_deleting
+    threshold = now_utc() - expected_time_in_deleting
 
     for nid, node in nodes.items():
         provision_updated_at = (

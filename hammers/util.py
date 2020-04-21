@@ -66,6 +66,8 @@ def parse_datestr(datestr, fmt=None):
             continue
     return None
 
+def now_utc():
+    return datetime.utcnow().replace(tzinfo=timezone("UTC"))
 
 # 3.7+ has https://bugs.python.org/issue10049
 @contextlib.contextmanager
