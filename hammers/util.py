@@ -1,8 +1,9 @@
 # coding: utf-8
 import argparse
 import contextlib
-from datetime import datetime, timezone
+from datetime import datetime
 import functools
+from pytz import timezone
 from subprocess import Popen, PIPE, check_output
 from time import time
 
