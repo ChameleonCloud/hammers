@@ -1,6 +1,7 @@
 # coding: utf-8
 import argparse
 import contextlib
+from datetime import datetime, timezone
 import functools
 from subprocess import Popen, PIPE, check_output
 from time import time
@@ -36,6 +37,33 @@ def drop_prefix(s, start):
     if s[:l] != start:
         raise ValueError('string does not start with expected value')
     return s[l:]
+
+
+DATE_FORMATS = {
+    "cli": "%Y-%m-%d %H:%M:%S",
+    "nova": "%Y-%m-%d %H:%M:%S",
+    "ironic": "%Y-%m-%dT%H:%M:%S",
+    "blazar_event": "%Y-%m-%d %H:%M:%S",
+    "blazar_lease": "%Y-%m-%dT%H:%M:%S.%f",
+}
+
+def parse_datestr(datestr, fmt=None):
+    if fmt:
+        formats = [fmt]
+    else:
+        formats = DATE_FORMATS.keys()
+
+    # HACK(jca): Chop of timezone for sanity, assume UTC
+    datestr = datestr.split('+')[0]
+
+    for f in formats:
+        try:
+            dateobj = datetime.strptime(datestr, DATE_FORMATS[f])
+            dateobj = dateobj.replace(tzinfo=timezone("UTC"))
+            return dateobj
+        except ValueError:
+            continue
+    return None
 
 
 # 3.7+ has https://bugs.python.org/issue10049

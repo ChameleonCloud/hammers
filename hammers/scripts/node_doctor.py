@@ -10,7 +10,7 @@ import re
 import sys
 
 from hammers import osrest, osapi
-from hammers.util import base_parser
+from hammers.util import base_parser, parse_datestr
 
 MAINTENANCE_LEASE_REGEX = "^[a-zA-Z0-9\-]+-maintenance$"
 NODE_AILMENTS_MESSAGES = {
@@ -80,8 +80,10 @@ def node_stuck_deleting(nodes):
     threshold = datetime.now() - expected_time_in_deleting
 
     for nid, node in nodes.items():
+        provision_updated_at = (
+            parse_datestr(node["provision_updated_at"], fmt="ironic"))
         if (node["provision_state"] == "deleting" and
-            node["provision_updated_at"] < threshold and
+            provision_updated_at < threshold and
             node["last_error"] is not None):
             nodes[nid]["ailments"].append("stuck_deleting")
 
