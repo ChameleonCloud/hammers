@@ -83,8 +83,8 @@ def node_stuck_deleting(nodes):
         provision_updated_at = (
             parse_datestr(node["provision_updated_at"], fmt="ironic"))
         if (node["provision_state"] == "deleting" and
-            provision_updated_at < threshold and
-            node["last_error"] is not None):
+                provision_updated_at < threshold and
+                node["last_error"] is not None):
             nodes[nid]["ailments"].append("stuck_deleting")
 
 
@@ -102,9 +102,13 @@ def node_maintenance_state_error(auth, nodes):
 
 def node_not_in_freepool(auth, nodes):
     freepool = osrest.nova.aggregate_details(auth, '1')
+    hosts = osrest.blazar.hosts(auth)
+    unallocated_nodes = [
+        hosts[x['resource_id']]['hypervisor_hostname'] for x
+        in osrest.blazar.host_allocations(auth) if not x['reservations']]
 
     for node_id in available_nodes(nodes):
-        if node_id not in freepool['hosts']:
+        if node_id in unallocated_nodes and node_id not in freepool['hosts']:
             nodes[node_id]['ailments'].append("not_in_freepool")
 
 
@@ -130,7 +134,8 @@ def resource_provider_failure(auth, nodes):
         in_use = osrest.placement.resource_provider(
             auth, provider_by_node.get(node_id), 'usages')
         reserved = osrest.placement.resource_provider(
-            auth, node_id, 'inventories', resource_class='CUSTOM_BAREMETAL')
+            auth, provider_by_node.get(node_id), 'inventories',
+            resource_class='CUSTOM_BAREMETAL')
 
         if in_use:
             allocations = osrest.placement.resource_provider(
