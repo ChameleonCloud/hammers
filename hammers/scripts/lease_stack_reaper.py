@@ -8,16 +8,17 @@ Reclaims nodes from leases that violate terms of use.
 
 * ``info`` to just display leases or actuall delete them with ``delete``
 '''
-import json
+import collections
 import sys
 from pprint import pprint
 from datetime import datetime
+from pytz import timezone
 
-from hammers import MySqlArgs, osapi, query
+from hammers import osapi
 from hammers.slack import Slackbot
-from hammers.osrest.blazar import lease_delete
+from hammers.osrest import blazar, keystone
 from hammers.notifications import _email
-from hammers.util import base_parser
+from hammers.util import base_parser, parse_datestr
 
 
 LEASES_ALLOWED = 1
@@ -41,21 +42,19 @@ class User:
         self.user_id = user_id
         self.name = name
         self.email = email
-        self.nodes = {}
+        self.nodes = collections.defaultdict(list)
 
-    def add_lease(self, node_type, lease_id, start_date, end_date, **kwargs):
+    def add_lease(self, node_type, lease):
         """Add lease to node list."""
-        if node_type not in self.nodes:
-            self.nodes[node_type] = set()
-
-        self.nodes[node_type].add((lease_id, start_date, end_date))
+        self.nodes[node_type].append(lease)
 
     def sort_leases_by_date(self):
         """Sort leases by date for each node."""
         for node_type, leases in self.nodes.items():
-            self.nodes[node_type] = list(sorted(leases, key=lambda x: x[1]))
+            self.nodes[node_type] = list(
+                sorted(leases, key=lambda x: x['start_date']))
 
-    def leases_in_violation(self, db):
+    def leases_in_violation(self):
         """Check for lease stacking and add lease to delete list."""
         self.sort_leases_by_date()
         leases_to_delete = set()
@@ -65,8 +64,7 @@ class User:
                 continue
             
             if 'gpu_' in node_type:
-                gpu_day_violation = self.find_gpu_days_limit_leases(
-                    db, leases)
+                gpu_day_violation = self.find_gpu_days_limit_leases(leases)
                 leases_to_delete.update(gpu_day_violation)
 
             stacked_leases = self.find_stacked_leases(leases)
@@ -74,21 +72,19 @@ class User:
 
         return leases_to_delete
 
-    def find_gpu_days_limit_leases(self, db, leases):
-        """Return list of leases in violation of gpu days limit."""
+    def find_gpu_days_limit_leases(self, leases):
+        """Return list of lease ids in violation of gpu days limit."""
         user_gpu_days = 0
-        in_violation = []
+        in_violation = set()
 
-        for i in range(len(leases)):
+        for lease in leases:
 
-            lease_id, start_date, end_date = leases[i]
-
-            lease_days = (end_date - start_date).days
-            node_count = len(list(query.get_nodes_by_lease(db, lease_id)))
+            lease_days = (lease['end_date'] - lease['start_date']).days
+            node_count = len(lease['nodes'])
             user_gpu_days += lease_days * node_count
 
             if user_gpu_days > MAX_GPU_DAYS_PER_USER:
-                in_violation.append(leases[i])
+                in_violation.append(lease['id'])
 
         return in_violation
 
@@ -98,17 +94,18 @@ class User:
 
         for i in range(len(leases)):
 
-            _, start_date, end_date = leases[i]
+            start_date = leases[i]['start_date']
+            end_date = leases[i]['end_date']
 
             if i > 0:
-                last_end_date = leases[i - 1][2]
+                last_end_date = leases[i - 1]['end_date']
             else:
-                last_end_date = datetime.min
+                last_end_date = datetime.min.replace(tzinfo=timezone('UTC'))
 
             if i < len(leases) - 1:
-                next_start_date = leases[i + 1][1]
+                next_start_date = leases[i + 1]['start_date']
             else:
-                next_start_date = datetime.max
+                next_start_date = datetime.max.replace(tzinfo=timezone('UTC'))
 
             stacked_previous = (
                 (start_date - last_end_date).days
@@ -120,24 +117,26 @@ class User:
             if stacked_previous or stacked_next:
                 stacked.append(leases[i])
 
-        return [x for x in stacked if (x[2] - x[1]).days > 1]
+        return [
+            x['id'] for x in stacked
+            if (x['end_date'] - x['start_date']).days > 1]
 
-    def print_info(self, leases):
+    def print_info(self, lease_ids):
         """Return dict of info for console output."""
         return {
             'user_name': self.name,
             'user_email': self.email,
-            'leases': leases}
+            'leases': lease_ids}
 
 
-def send_delete_notification(gpu_user, leases, sender):
+def send_delete_notification(gpu_user, lease_ids, sender):
     """Send email notifying user of leases deleted."""
     email_body = _email.STACKED_LEASE_DELETED_EMAIL_BODY
     html = _email.render_template(
         email_body,
         vars={
             'username': gpu_user.name,
-            'lease_list': [x[0] for x in leases]})
+            'lease_list': lease_ids})
     subject = "Your Chameleon lease(s) was deleted."
     _email.send(
         _email.get_host(),
@@ -147,22 +146,42 @@ def send_delete_notification(gpu_user, leases, sender):
         html)
 
 
-def collect_user_leases(db):
+def collect_user_leases(auth):
     users = {}
+    users_by_id = keystone.users(auth)
+    hosts_by_id = blazar.hosts(auth)
+    allocs_by_lease = collections.defaultdict(list)
 
-    for row in query.get_advanced_reservations_by_node_type(db):
-        user_id = row['user_id']
+    for alloc in blazar.host_allocations(auth):
+        for r in alloc['reservations']:
+            allocs_by_lease[r['lease_id']].append(alloc['resource_id'])
 
-        if row['project_id'] in EXCLUDED_PROJECT_IDS:
+
+    now = datetime.utcnow().replace(tzinfo=timezone('UTC'))
+
+    for lease_id, lease in blazar.leases(auth).items():
+        user_id = lease['user_id']
+        lease['nodes'] = allocs_by_lease[lease_id]
+        lease['start_date'] = parse_datestr(lease['start_date'])
+        lease['end_date'] = parse_datestr(lease['end_date'])
+        terminated = lease['status'].lower() == 'terminated'
+
+        if lease['project_id'] in EXCLUDED_PROJECT_IDS:
             continue
 
-        if user_id not in list(users.keys()):
-            users[user_id] = User(
-                user_id=user_id,
-                name=row['user_name'],
-                email=json.loads(row['user_extra'])['email'])
+        if lease['start_date'] < now or terminated:
+            continue
 
-        users[user_id].add_lease(**row)
+        if user_id not in users:
+            users[user_id] = User(user_id=user_id,
+                                  name=users_by_id[user_id]['name'],
+                                  email=users_by_id[user_id]['email'])
+
+        node_types = set(
+            [hosts_by_id[h]['node_type'] for h in allocs_by_lease[lease_id]])
+
+        if len(node_types) == 1:
+            users[user_id].add_lease(node_types.pop(), lease)
 
     return users
 
@@ -172,14 +191,6 @@ def main(argv=None):
         argv = sys.argv
 
     parser = base_parser('Lease Stack Reaper')
-    mysqlargs = MySqlArgs({
-        'user': 'root',
-        'password': '',
-        'host': 'localhost',
-        'port': 3306,
-    })
-    mysqlargs.inject(parser)
-
     parser.add_argument(
         '-q', '--quiet', action='store_true',
         help='Quiet mode. No output if there was nothing to do.')
@@ -193,25 +204,25 @@ def main(argv=None):
         default='noreply@chameleoncloud.org')
 
     args = parser.parse_args(argv[1:])
-    mysqlargs.extract(args)
     auth = osapi.Auth.from_env_or_args(args=args)
     sender = args.sender
-    slack = Slackbot(args.slack, script_name='lease_stack_reaper') if args.slack else None
 
-    db = mysqlargs.connect()
-    db.version = query.ROCKY
+    if args.slack:
+        slack = Slackbot(args.slack, script_name='lease_stack_reaper')
+    else:
+        slack = None
 
     try:
-        users = collect_user_leases(db)
+        users = collect_user_leases(auth)
         lease_delete_count = 0
 
         for user in list(users.values()):
-            leases_in_violation = user.leases_in_violation(db)
+            leases_in_violation = user.leases_in_violation()
 
             if leases_in_violation:
                 if args.action == 'delete':
                     lease_delete_count += len(leases_in_violation)
-                    [lease_delete(auth, x[0]) for x in leases_in_violation]
+                    [blazar.lease_delete(auth, l) for l in leases_in_violation]
                     send_delete_notification(user, leases_in_violation, sender)
                 else:
                     pprint(user.print_info(leases_in_violation))

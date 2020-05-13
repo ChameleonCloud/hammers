@@ -62,7 +62,7 @@ def users(auth, enabled=None, name=None):
     if enabled is not None:
         params['enabled'] = enabled
 
-    response = API.get(auth, '/users', params=params)
+    response = API.get(auth, '/v3/users', params=params)
 
     return {u['id']: u for u in response.json()['users']}
 
