@@ -26,10 +26,6 @@ parser = base_parser(
 args = parser.parse_args(sys.argv[1:])
 auth = osapi.Auth.from_env_or_args(args=args)
 
-# Get aggregates and leases
-aggregates = osrest.nova.aggregates(auth)
-#leases = osrest.blazar.leases(auth)
-
 def is_terminated(lease):
     dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
 
@@ -80,43 +76,59 @@ def orphan_find(allaggs):
     for host in ironic_hosts:
         if host not in hosts_from_aggs:
             host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
-            print(host_id)
             orphans.append(host_id)
-    
+    print("oprhans")
+    print(orphans)
     return(orphans)
 
-def orphan_helper(allaggs):
-   
-    # Find all hosts currently in aggregates
-    hosts_from_aggs = []
-    for agg in allaggs.values():
-        for host in agg['hosts']:
-            hosts_from_aggs.append(host)
+def has_active_allocation(orph)
 
-    # If ironic host not in aggregate hosts, check if associated with current blazar host allocation and place it in its aggregate. Else send to freepool.
-    ironic_hosts = osrest.ironic.nodes(auth, details=False).keys()
+    matching_allocs = []
+
+    matching_allocs.append(alloc for alloc in host_allocs if x['resource_id'] == orph) 
+    print("matching allocations")
+    print(matching_allocs)
+    if not matching_allocs:
+        return False
+    now = datetime.now()
+    rem_alloc = matching_allocs.remove(m_alloc for m_alloc in matching_allocs if dateutil.parser.parse(m_alloc['reservations'][0]['start_date']) > now or dateutil.parser.parse(m_alloc['reservations'][0]['end_date']) < now)
+    print("remaining allocation(s?) and length"
+    print(rem_alloc)
+    print(len(rem_alloc))
+    if not rem_alloc:
+        return False
+    elif len(rem_alloc) > 1
+        print("More than one allocation")
+        #raise error, log slack message
+    res = remr_alloc[0]['reservations'][0]['id']
+    return(res)
+
+def orphan_helper():
+   
     orph_reports = [] 
-    for host in ironic_hosts:
-        if host not in hosts_from_aggs:
-            host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
-            print(host_id)
-            try:
-                active_res = [x['reservations'][0]['id'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == host_id and dateutil.parser.parse(x['reservations'][0]['start_date']) < datetime.now() and dateutil.parser.parse(x['reservations'][0]['end_date']) > datetime.now()][0]
-                print(active_res)
-                target_agg = [aggr['id'] for aggr in allaggs.values() if aggr['name'] == active_res][0]
-                print(target_agg)
-                #_addremove_host(auth, add_host, target_agg, host)
-                orph_reports.append("Added node " + host + " to aggregate " + str(target_agg) + ".")
-            except IndexError:
-                #_addremove_host(auth, add_host, 'freepool', host)
-                orph_reports.append("Added node " + host + " to freepool")
+
+    try:
+        active_res = [x['reservations'][0]['id'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == host_id and dateutil.parser.parse(x['reservations'][0]['start_date']) < datetime.now() and dateutil.parser.parse(x['reservations'][0]['end_date']) > datetime.now()][0]
+        print(active_res)
+        target_agg = [aggr['id'] for aggr in allaggs.values() if aggr['name'] == active_res][0]
+        print(target_agg)
+        #_addremove_host(auth, add_host, target_agg, host)
+        orph_reports.append("Added node " + host + " to aggregate " + str(target_agg) + ".")
+    except IndexError:
+        #_addremove_host(auth, add_host, 'freepool', host)
+        orph_reports.append("Added node " + host + " to freepool")
     
     print(orph_reports)
 
     sys.exit()
 
 def main(argv=None):
+    
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
+    # Get aggregates and leases and host allocations
+    aggregates = osrest.nova.aggregates(auth)
+    host_allocs = osrest.blazar.host_allocations(auth)
+    #leases = osrest.blazar.leases(auth)
 
     try:
         #term_leases = [lease for lease in leases.values() if is_terminated(lease)]
@@ -124,7 +136,17 @@ def main(argv=None):
         #aggregate_list = list(itertools.chain(*old_aggregates))
         #errors, report = clear_aggregates(aggregate_list)
         orphan_list = orphan_find(aggregates)
-        #orphan_helper(aggregates)
+        
+        if orphan_list:
+            for orphan in orphan_list:
+                destiny = has_active_allocation(orphan)
+                if destiny is None:
+    		    print("Error determining allocation status")
+	        elif destiny is False:
+    	       	    print("result false")
+	        else:
+    		    print("result true" + destiny)
+        #orphan_helper()
 
         if report:
             str_report = ''.join(report)
