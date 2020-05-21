@@ -26,6 +26,12 @@ parser = base_parser(
 args = parser.parse_args(sys.argv[1:])
 auth = osapi.Auth.from_env_or_args(args=args)
 
+#Get aggregates, leases, host_allocations
+aggregates = osrest.nova.aggregates(auth)
+host_allocs = osrest.blazar.host_allocations(auth)
+#lease = osrest.blazar.leases(auth)
+
+
 def is_terminated(lease):
     dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
 
@@ -81,75 +87,59 @@ def orphan_find(allaggs):
     print(orphans)
     return(orphans)
 
-def has_active_allocation(orph)
+def has_active_allocation(orph):
 
-    matching_allocs = []
-
-    matching_allocs.append(alloc for alloc in host_allocs if x['resource_id'] == orph) 
+    matching_allocs = [alloc for alloc in host_allocs if alloc['resource_id'] == orph]
     print("matching allocations")
     print(matching_allocs)
     if not matching_allocs:
         return False
-    now = datetime.now()
-    rem_alloc = matching_allocs.remove(m_alloc for m_alloc in matching_allocs if dateutil.parser.parse(m_alloc['reservations'][0]['start_date']) > now or dateutil.parser.parse(m_alloc['reservations'][0]['end_date']) < now)
-    print("remaining allocation(s?) and length"
-    print(rem_alloc)
-    print(len(rem_alloc))
-    if not rem_alloc:
+    for a in matching_allocs:
+        print(a['reservations'])
+        print(type(a['reservations']))
+    if not any(al['reservations'] for al in matching_allocs):
+        print("no reservations in any agg")
         return False
-    elif len(rem_alloc) > 1
+    elif len(matching_allocs) > 1:
         print("More than one allocation")
-        #raise error, log slack message
-    res = remr_alloc[0]['reservations'][0]['id']
+        return None
+    res = matching_allocs[0]['reservations'][0]['id']
     return(res)
-
-def orphan_helper():
-   
-    orph_reports = [] 
-
-    try:
-        active_res = [x['reservations'][0]['id'] for x in osrest.blazar.host_allocations(auth) if x['resource_id'] == host_id and dateutil.parser.parse(x['reservations'][0]['start_date']) < datetime.now() and dateutil.parser.parse(x['reservations'][0]['end_date']) > datetime.now()][0]
-        print(active_res)
-        target_agg = [aggr['id'] for aggr in allaggs.values() if aggr['name'] == active_res][0]
-        print(target_agg)
-        #_addremove_host(auth, add_host, target_agg, host)
-        orph_reports.append("Added node " + host + " to aggregate " + str(target_agg) + ".")
-    except IndexError:
-        #_addremove_host(auth, add_host, 'freepool', host)
-        orph_reports.append("Added node " + host + " to freepool")
-    
-    print(orph_reports)
-
-    sys.exit()
 
 def main(argv=None):
     
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
-    # Get aggregates and leases and host allocations
-    aggregates = osrest.nova.aggregates(auth)
-    host_allocs = osrest.blazar.host_allocations(auth)
-    #leases = osrest.blazar.leases(auth)
 
     try:
         #term_leases = [lease for lease in leases.values() if is_terminated(lease)]
         #old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
         #aggregate_list = list(itertools.chain(*old_aggregates))
-        #errors, report = clear_aggregates(aggregate_list)
+        #errors, reports = clear_aggregates(aggregate_list)
+        reports = []
         orphan_list = orphan_find(aggregates)
         
         if orphan_list:
             for orphan in orphan_list:
                 destiny = has_active_allocation(orphan)
+                host = osrest.blazar.host(auth, orphan)
                 if destiny is None:
-    		    print("Error determining allocation status")
-	        elif destiny is False:
-    	       	    print("result false")
-	        else:
-    		    print("result true" + destiny)
-        #orphan_helper()
+                    print("Error determining allocation status")
+                    reports.append("Error identifying allocation for orphan host {}.".format(orphan) + "\n")
+                elif destiny is False:
+                    print("returning to freepool")
+                    print("blazar host")
+                    print(host['hypervisor_hostname'])
+                    reports.append("Returning orphan host {} to freepool.".format(orphan) + "\n")
+                    osrest.nova.aggregate_add_host(auth, 1, host['hypervisor_hostname'])
+                else:
+                    destination_agg = [aggr['id'] for aggr in aggregates.values() if aggr['name'] == destiny][0]
+                    print("result true, host has aggregate")
+                    print(destiny)
+                    reports.append("Moving orphan host {} to destined aggregate {}.".format(orphan, destination_agg) + "\n")
+                    osrest.nova.aggregate_add_host(auth, destination_agg, host['hypervisor_hostname'])
 
-        if report:
-            str_report = ''.join(report)
+        if reports:
+            str_report = ''.join(reports)
 
             print(str_report)
 
