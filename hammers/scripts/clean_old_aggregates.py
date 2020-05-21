@@ -27,10 +27,14 @@ args = parser.parse_args(sys.argv[1:])
 auth = osapi.Auth.from_env_or_args(args=args)
 
 #Get aggregates, leases, host_allocations
-aggregates = osrest.nova.aggregates(auth)
+#aggregates = osrest.nova.aggregates(auth)
 host_allocs = osrest.blazar.host_allocations(auth)
-#lease = osrest.blazar.leases(auth)
-
+leases = osrest.blazar.leases(auth)
+#print('leases')
+#print(leases)
+#print('host allocations')
+#print(host_allocs)
+sys.exit()
 
 def is_terminated(lease):
     dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
@@ -106,6 +110,20 @@ def has_active_allocation(orph):
     res = matching_allocs[0]['reservations'][0]['id']
     return(res)
 
+def del_expired_alloc(leaselist,hallo):
+
+    if not hallo['reservations']:
+        return
+    elif hallo['reservations'][0]['end_date'] < datetime.now():
+        print('OLD HOST ALLOC')
+        exp_lease = hallo['reservations'][0]['lease_id']
+        print(exp_lease)
+    else:
+        print('lease good')
+        return
+    msg="Deleting host_allocation for host {} matching expired lease {}.".format(hallo['resource_id'],hallo['reservations'][0]['lease_id'])
+    return(msg)
+
 def main(argv=None):
     
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
@@ -115,9 +133,9 @@ def main(argv=None):
         #old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
         #aggregate_list = list(itertools.chain(*old_aggregates))
         #errors, reports = clear_aggregates(aggregate_list)
+        #orphan_list = orphan_find(aggregates)
         reports = []
-        orphan_list = orphan_find(aggregates)
-        
+        '''
         if orphan_list:
             for orphan in orphan_list:
                 destiny = has_active_allocation(orphan)
@@ -137,6 +155,9 @@ def main(argv=None):
                     print(destiny)
                     reports.append("Moving orphan host {} to destined aggregate {}.".format(orphan, destination_agg) + "\n")
                     osrest.nova.aggregate_add_host(auth, destination_agg, host['hypervisor_hostname'])
+        '''
+
+        reports.append([del_expired_alloc(leases,host_alloc) for host_alloc in host_allocations])
 
         if reports:
             str_report = ''.join(reports)
