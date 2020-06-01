@@ -7,7 +7,7 @@ import re
 import requests
 import traceback
 import dateutil.parser
-from datetime import datetime
+#from datetime import datetime
 from urllib.error import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
@@ -15,6 +15,7 @@ from hammers import osapi, osrest
 #from hammers.osrest.ironic import nodes
 #from hammers.osrest.blazar import hosts,host_allocations,lease
 from hammers.util import base_parser
+from hammers import MySqlArgs, query
 
 # Append "/v3" to OS_AUTH_URL, if necesary
 auth_url = os.environ["OS_AUTH_URL"]
@@ -23,21 +24,25 @@ if not re.search("\/v3$", auth_url):
 
 parser = base_parser(
     'Clean old Nova aggregates tied to expired Blazar leases.')
+mysqlargs = MySqlArgs({
+    'user': 'root',
+    'password': '',
+    'host': 'localhost',
+    'port': '3306',
+    })
+mysqlargs.inject(parser)
 args = parser.parse_args(sys.argv[1:])
 auth = osapi.Auth.from_env_or_args(args=args)
+mysqlargs.extract(args)
+conn = mysqlargs.connect()
 
 #Get aggregates, leases, host_allocations
-#aggregates = osrest.nova.aggregates(auth)
+aggregates = osrest.nova.aggregates(auth)
 host_allocs = osrest.blazar.host_allocations(auth)
 leases = osrest.blazar.leases(auth)
-#print('leases')
-#print(leases)
-#print('host allocations')
-#print(host_allocs)
-sys.exit()
+dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
 
 def is_terminated(lease):
-    dt_fmt = '%Y-%m-%dT%H:%M:%S.%f'
 
     # Get leases with past end dates
     now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone('UTC'))
@@ -87,41 +92,24 @@ def orphan_find(allaggs):
         if host not in hosts_from_aggs:
             host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
             orphans.append(host_id)
-    print("oprhans")
-    print(orphans)
     return(orphans)
 
 def has_active_allocation(orph):
 
     matching_allocs = [alloc for alloc in host_allocs if alloc['resource_id'] == orph]
-    print("matching allocations")
-    print(matching_allocs)
     if not matching_allocs:
         return False
-    for a in matching_allocs:
-        print(a['reservations'])
-        print(type(a['reservations']))
-    if not any(al['reservations'] for al in matching_allocs):
-        print("no reservations in any agg")
-        return False
-    elif len(matching_allocs) > 1:
-        print("More than one allocation")
-        return None
     res = matching_allocs[0]['reservations'][0]['id']
     return(res)
 
-def del_expired_alloc(leaselist,hallo):
+def del_expired_alloc(db, old_alloc):
 
-    if not hallo['reservations']:
-        return
-    elif hallo['reservations'][0]['end_date'] < datetime.now():
-        print('OLD HOST ALLOC')
-        exp_lease = hallo['reservations'][0]['lease_id']
-        print(exp_lease)
-    else:
-        print('lease good')
-        return
-    msg="Deleting host_allocation for host {} matching expired lease {}.".format(hallo['resource_id'],hallo['reservations'][0]['lease_id'])
+    ha_id = old_alloc['id']
+    l_id = old_alloc['lid']
+    hh = old_alloc['hypervisor_hostname']
+
+    msg=("Deleting host_allocation for host {} matching expired lease {}. ".format(hh,l_id) + "\n")
+    count = query.blazar_old_host_alloc_delete(db, ha_id)
     return(msg)
 
 def main(argv=None):
@@ -129,41 +117,37 @@ def main(argv=None):
     slack = Slackbot(args.slack, script_name='clean-old-aggregates') if args.slack else None
 
     try:
-        #term_leases = [lease for lease in leases.values() if is_terminated(lease)]
-        #old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
-        #aggregate_list = list(itertools.chain(*old_aggregates))
-        #errors, reports = clear_aggregates(aggregate_list)
-        #orphan_list = orphan_find(aggregates)
+        term_leases = [lease for lease in leases.values() if is_terminated(lease)]
+        old_aggregates = [aggs for aggs in (aggregates_for_lease(lease) for lease in term_leases) if aggs != None]
+        aggregate_list = list(itertools.chain(*old_aggregates))
+        errors, reports = clear_aggregates(aggregate_list)
+        orphan_list = orphan_find(aggregates)
         reports = []
-        '''
+        
         if orphan_list:
             for orphan in orphan_list:
                 destiny = has_active_allocation(orphan)
                 host = osrest.blazar.host(auth, orphan)
                 if destiny is None:
-                    print("Error determining allocation status")
                     reports.append("Error identifying allocation for orphan host {}.".format(orphan) + "\n")
                 elif destiny is False:
-                    print("returning to freepool")
-                    print("blazar host")
-                    print(host['hypervisor_hostname'])
                     reports.append("Returning orphan host {} to freepool.".format(orphan) + "\n")
                     osrest.nova.aggregate_add_host(auth, 1, host['hypervisor_hostname'])
                 else:
                     destination_agg = [aggr['id'] for aggr in aggregates.values() if aggr['name'] == destiny][0]
-                    print("result true, host has aggregate")
-                    print(destiny)
                     reports.append("Moving orphan host {} to destined aggregate {}.".format(orphan, destination_agg) + "\n")
                     osrest.nova.aggregate_add_host(auth, destination_agg, host['hypervisor_hostname'])
-        '''
+        
 
-        reports.append([del_expired_alloc(leases,host_alloc) for host_alloc in host_allocations])
+        old_allocations = query.blazar_find_old_host_alloc(conn)
+        for alloc in old_allocations:
+            reports.append(del_expired_alloc(conn, alloc))
+        conn.db.commit()
 
         if reports:
             str_report = ''.join(reports)
 
             print(str_report)
-
             if slack:
                 if errors:
                     slack.error(str_report)
