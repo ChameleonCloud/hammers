@@ -146,8 +146,6 @@ def main(argv=None):
 
         if reports:
             str_report = ''.join(reports)
-
-            print(str_report)
             if slack:
                 if errors:
                     slack.error(str_report)
