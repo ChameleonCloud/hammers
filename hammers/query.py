@@ -536,7 +536,7 @@ def blazar_find_old_host_alloc(db):
     JOIN blazar.computehosts ch
     ON ca.compute_host_id=ch.id
     WHERE ca.deleted is Null
-       AND l.end_date < curdate() - interval 7 day
+       AND l.end_date < curdate()
     '''
     return db.query(sql, limit=None)
 
