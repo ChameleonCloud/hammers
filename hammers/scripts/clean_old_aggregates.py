@@ -7,13 +7,12 @@ import re
 import requests
 import traceback
 import dateutil.parser
-#from datetime import datetime
 from urllib.error import HTTPError
 from hammers.slack import Slackbot
 from hammers import osapi, osrest
-#from hammers.osrest.nova import aggregate_delete, _addremove_host
-#from hammers.osrest.ironic import nodes
-#from hammers.osrest.blazar import hosts,host_allocations,lease
+from hammers.osrest.nova import aggregate_delete, _addremove_host
+from hammers.osrest.ironic import nodes
+from hammers.osrest.blazar import hosts,host_allocations,lease
 from hammers.util import base_parser
 from hammers import MySqlArgs, query
 
@@ -36,7 +35,6 @@ auth = osapi.Auth.from_env_or_args(args=args)
 mysqlargs.extract(args)
 conn = mysqlargs.connect()
 
-#Get aggregates, leases, host_allocations
 aggregates = osrest.nova.aggregates(auth)
 host_allocs = osrest.blazar.host_allocations(auth)
 leases = osrest.blazar.leases(auth)
@@ -92,7 +90,7 @@ def orphan_find(allaggs):
         if host not in hosts_from_aggs:
             host_id = [h['id'] for h in osrest.blazar.hosts(auth).values() if h['uid'] == host][0]
             orphans.append(host_id)
-    return(orphans)
+    return orphans
 
 def has_active_allocation(orph):
 
@@ -100,7 +98,7 @@ def has_active_allocation(orph):
     if not matching_allocs:
         return False
     res = matching_allocs[0]['reservations'][0]['id']
-    return(res)
+    return res
 
 def del_expired_alloc(db, old_alloc):
 
@@ -108,9 +106,8 @@ def del_expired_alloc(db, old_alloc):
     l_id = old_alloc['lid']
     hh = old_alloc['hypervisor_hostname']
 
-    msg=("Deleting host_allocation for host {} matching expired lease {}. ".format(hh,l_id) + "\n")
     count = query.blazar_old_host_alloc_delete(db, ha_id)
-    return(msg)
+    return ha_id, l_id
 
 def main(argv=None):
     
@@ -124,28 +121,29 @@ def main(argv=None):
         orphan_list = orphan_find(aggregates)
         reports = []
         
-        if orphan_list:
-            for orphan in orphan_list:
-                destiny = has_active_allocation(orphan)
-                host = osrest.blazar.host(auth, orphan)
-                if destiny is None:
-                    reports.append("Error identifying allocation for orphan host {}.".format(orphan) + "\n")
-                elif destiny is False:
-                    reports.append("Returning orphan host {} to freepool.".format(orphan) + "\n")
-                    osrest.nova.aggregate_add_host(auth, 1, host['hypervisor_hostname'])
-                else:
-                    destination_agg = [aggr['id'] for aggr in aggregates.values() if aggr['name'] == destiny][0]
-                    reports.append("Moving orphan host {} to destined aggregate {}.".format(orphan, destination_agg) + "\n")
-                    osrest.nova.aggregate_add_host(auth, destination_agg, host['hypervisor_hostname'])
+
+        for orphan in orphan_list:
+            destiny = has_active_allocation(orphan)
+            host = osrest.blazar.host(auth, orphan)
+            if destiny is None:
+                reports.append("Error identifying allocation for orphan host {}.".format(orphan) + "\n")
+            elif destiny is False:
+                reports.append("Returning orphan host {} to freepool.".format(orphan) + "\n")
+                osrest.nova.aggregate_add_host(auth, 1, host['hypervisor_hostname'])
+            else:
+                destination_agg = [aggr['id'] for aggr in aggregates.values() if aggr['name'] == destiny][0]
+                reports.append("Moving orphan host {} to destined aggregate {}.".format(orphan, destination_agg))
+                osrest.nova.aggregate_add_host(auth, destination_agg, host['hypervisor_hostname'])
         
 
         old_allocations = query.blazar_find_old_host_alloc(conn)
         for alloc in old_allocations:
-            reports.append(del_expired_alloc(conn, alloc))
+            hostname, lease_id = del_expired_alloc(conn, alloc)
+            reports.append("Deleted host_allocation for host {} matching expired lease {}.".format(hostname, lease_id))
         conn.db.commit()
 
         if reports:
-            str_report = ''.join(reports)
+            str_report = '\n'.join(reports)
             if slack:
                 if errors:
                     slack.error(str_report)
