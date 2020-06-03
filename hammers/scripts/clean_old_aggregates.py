@@ -62,15 +62,15 @@ def clear_aggregates(agg_list):
                 try:
                     _addremove_host(auth, 'remove_host', x['id'], host)
                     _addremove_host(auth, 'add_host', 1, host)
-                    report.append("Deleted host {} from aggregate {} and returned to freepool. ".format(host, x['id']) + "\n")
+                    report.append("Deleted host {} from aggregate {} and returned to freepool. ".format(host, x['id']))
                 except Exception as exc:
-                    report.append("Unexpected error moving host {} from aggregate {} to freepool. ".format(host, x['id']) + "\n")
+                    report.append("Unexpected error moving host {} from aggregate {} to freepool. ".format(host, x['id']))
                     errors.append(exc)
             try:
                 aggregate_delete(auth, x['id'])
-                report.append("Deleted aggregate {}. ".format(x['id']) + "\n")
+                report.append("Deleted aggregate {}. ".format(x['id']))
             except Exception as exc:
-                report.append("Unexpected error deleting aggregate {}. ".format(x['id']) + "\n")
+                report.append("Unexpected error deleting aggregate {}. ".format(x['id']))
                 errors.append(exc)
 
     return errors, report
@@ -119,14 +119,12 @@ def main(argv=None):
         aggregate_list = list(itertools.chain(*old_aggregates))
         errors, reports = clear_aggregates(aggregate_list)
         orphan_list = orphan_find(aggregates)
-        reports = []
         
-
         for orphan in orphan_list:
             destiny = has_active_allocation(orphan)
             host = osrest.blazar.host(auth, orphan)
             if destiny is None:
-                reports.append("Error identifying allocation for orphan host {}.".format(orphan) + "\n")
+                reports.append("Error identifying allocation for orphan host {}.".format(orphan))
             elif destiny is False:
                 reports.append("Returning orphan host {} to freepool.".format(orphan) + "\n")
                 osrest.nova.aggregate_add_host(auth, 1, host['hypervisor_hostname'])
