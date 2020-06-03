@@ -523,6 +523,33 @@ def blazar_set_non_reservable(db, node):
     '''
     return db.query(sql, args=[node], no_rows=True)
 
+@query
+def blazar_find_old_host_alloc(db):
+    """Find computehost allocations tied to expired leases"""
+    sql = '''\
+    SELECT ca.id, l.id AS lid, ch.hypervisor_hostname
+    FROM blazar.computehost_allocations ca
+    JOIN blazar.reservations r
+    ON ca.reservation_id=r.id
+    JOIN blazar.leases l
+    ON r.lease_id=l.id
+    JOIN blazar.computehosts ch
+    ON ca.compute_host_id=ch.id
+    WHERE ca.deleted is Null
+       AND l.end_date < curdate()
+    '''
+    return db.query(sql, limit=None)
+
+@query
+def blazar_old_host_alloc_delete(db, host_alloc):
+    """Soft delete computehost_allocations tied to expired leases"""
+    sql = '''\
+    UPDATE blazar.computehost_allocations ca
+    SET ca.updated_at = curdate(), ca.deleted_at = curdate(), ca.deleted = ca.id
+    WHERE ca.id = %s
+    '''
+    return db.query(sql, args=[host_alloc], no_rows=True)
+
 def main(argv):
     """Run queries!"""
     import sys
