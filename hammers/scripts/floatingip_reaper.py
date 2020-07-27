@@ -24,12 +24,23 @@ from hammers import MySqlArgs, osapi, osrest, query
 from hammers.slack import Slackbot
 from hammers.util import base_parser
 
+SAGE_UC_IP_WHITELIST = [
+    '192.5.87.32',
+    '192.5.87.59',
+    '192.5.87.77',
+    '192.5.87.136',
+    '192.5.87.164'
+]
+
 def reaper(db, auth, grace_days, whitelist, dryrun=False):
     to_delete = {}
     # iterate through all idle floating ips
     for obj in query.idle_not_reserved_floating_ips(db, grace_days):
         project_id = obj['project_id']
         floating_ip_id = obj['floating_ip_id']
+
+        if obj['floating_ip_address'] in SAGE_UC_IP_WHITELIST:
+            continue
 
         # collect floating ips that don't belong to whitelist project
         if project_id not in whitelist:
