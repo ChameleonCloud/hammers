@@ -240,7 +240,9 @@ def idle_not_reserved_floating_ips(db, threshold_days):
     NOTE: For Rocky version only!
     '''
     sql = '''
-    SELECT f.project_id AS project_id, f.id AS floating_ip_id
+    SELECT f.project_id AS project_id
+         , f.id AS floating_ip_id
+         , f.floating_ip_address AS floating_ip_address
     FROM neutron.floatingips AS f
     JOIN neutron.standardattributes AS s
     ON f.standard_attr_id = s.id
