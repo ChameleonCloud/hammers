@@ -32,7 +32,7 @@ setup(
             'ironic-error-resetter = hammers.scripts.ironic_error_resetter:main',
             'orphan-resource-providers = hammers.scripts.orphan_resource_providers:main',
             'undead-instances = hammers.scripts.undead_instances:main',
-            'reservation-usage-notification = hammers.script.reservation_usage_notification',
+            'reservation-usage-notification = hammers.scripts.reservation_usage_notification',
             'orphans-detector = hammers.scripts.orphans_detector:main',
             'clean-old-aggregates = hammers.scripts.clean_old_aggregates:main',
             'floatingip-reaper = hammers.scripts.floatingip_reaper:main',

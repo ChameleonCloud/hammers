@@ -102,7 +102,8 @@ def send_notification(auth, lease, sender, warn_period, termination_period,
     user = keystone.user(auth, lease['user_id'])
     html = _email.render_template(
         email_body,
-        vars=dict(lease_name=lease['name'],
+        vars=dict(username = user['name'],
+                  lease_name=lease['name'],
                   lease_id=lease['id'],
                   warn_period=warn_period,
                   termination_period=termination_period))
