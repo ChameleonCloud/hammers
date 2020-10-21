@@ -56,15 +56,6 @@ RESERVATION_START_EMAIL_BODY = '''
 will start on {{ vars['startdatetime_utc'] }} UTC / {{ vars['startdatetime_ct'] }} Central Time.</p>
 '''
 
-IDLE_RESERVATION_EMAIL_BODY = '''
-<p>We're sending this email to inform you that your lease {{ vars['leasename'] }} (ID: {{ vars['leaseid'] }}) under project {{ vars['projectname'] }} on {{ vars['site'] }}
-has been idle for more than {{ vars['idlehours_threshold'] }} hours.</p>
-
-<p>If you don't need the reservation anymore, please delete the lease using
-either the Chameleon <a href='https://chameleoncloud.readthedocs.io/en/latest/technical/gui.html#reservations' target='_blank'>web interface</a>
-or <a href='https://chameleoncloud.readthedocs.io/en/latest/technical/cli.html' target='_blank'>command line interface</a> to release the resources.</p>
-'''
-
 STACKED_LEASE_DELETED_EMAIL_BODY = '''
 <p>
   We're sending this email to inform you that that following leases have been

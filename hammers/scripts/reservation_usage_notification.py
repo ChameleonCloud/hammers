@@ -15,9 +15,6 @@ from hammers.util import base_parser
 
 logging.basicConfig()
 
-IDLE_HOUR_THRESHOLD = 24
-
-
 def get_reservations_start_next_day(db):
     advance_reservations = query.get_advance_reservations(db)
     results = []
@@ -46,26 +43,6 @@ def get_reservations_start_next_day(db):
             results.append(email_pack)
 
     return results
-
-
-def get_idle_leases(db):
-    idle_leases = query.get_idle_leases(db, IDLE_HOUR_THRESHOLD)
-    results = []
-    for obj in idle_leases:
-        email_pack = {
-                'address': json.loads(obj['user_extra'])['email'],
-                'content_vars': {
-                    'username': obj['user_name'],
-                    'projectname': obj['project_name'],
-                    'leasename': obj['lease_name'],
-                    'leaseid': obj['lease_id'],
-                    'idlehours_threshold': IDLE_HOUR_THRESHOLD
-                }
-            }
-        results.append(email_pack)
-
-    return results
-
 
 def main(argv=None):
     if argv is None:
@@ -108,22 +85,6 @@ def main(argv=None):
             email_pack['address'],
             args.sender, subject,
             html)
-
-    # get idle leases
-    for email_pack in get_idle_leases(db):
-        email_pack['content_vars']['site'] = auth.region
-        html = _email.render_template(
-            _email.IDLE_RESERVATION_EMAIL_BODY,
-            vars=email_pack['content_vars'])
-        subject = 'You have an idle Chameleon lease {}'.format(
-            email_pack['content_vars']['leasename'])
-        _email.send(
-            email_host,
-            email_pack['address'],
-            args.sender,
-            subject,
-            html)
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
