@@ -464,44 +464,6 @@ def get_advance_reservations(db):
 
     return db.query(sql, limit=None)
 
-
-@query
-def get_idle_leases(db, hours):
-    """
-    Get all leases that have been idle for more than a given number hours.
-    An idle lease is defined as an ongoing lease without active instance and without lease update operation.
-    """
-    sql = '''\
-    SELECT lu.name AS user_name, u.extra AS user_extra, s.lease_name AS lease_name, s.lease_id AS lease_id, p.name AS project_name
-    FROM (
-        SELECT l.id AS lease_id, l.name AS lease_name, l.user_id, l.project_id
-        FROM blazar.leases AS l
-        JOIN blazar.reservations AS r ON l.id = r.lease_id
-        JOIN blazar.computehost_allocations AS ca ON ca.reservation_id = r.id
-        JOIN blazar.computehosts ch ON ca.compute_host_id = ch.id
-        LEFT JOIN nova.instances AS i ON i.node = ch.hypervisor_hostname
-                                     AND l.user_id = i.user_id
-                                     AND l.project_id = i.project_id
-        WHERE l.deleted_at IS NULL
-          AND l.start_date < UTC_TIMESTAMP()
-          AND l.end_date > UTC_TIMESTAMP()
-          AND TIMESTAMPDIFF(HOUR, l.updated_at, UTC_TIMESTAMP()) >= %s
-          AND TIMESTAMPDIFF(HOUR, r.updated_at, UTC_TIMESTAMP()) >= %s
-        GROUP BY l.id
-        HAVING COUNT(DISTINCT i.uuid) = 0
-            OR (
-                COUNT(DISTINCT i.uuid) > 0
-                AND SUM(ISNULL(i.deleted_at)) = 0
-                AND TIMESTAMPDIFF(HOUR, MAX(i.updated_at), UTC_TIMESTAMP()) >= %s
-               )
-    ) AS s
-    JOIN keystone.user AS u ON s.user_id = u.id
-    JOIN keystone.local_user AS lu ON u.id = lu.user_id
-    JOIN keystone.project AS p ON s.project_id = p.id
-    '''
-
-    return db.query(sql, (hours,)*3, limit=None)
-
 @query
 def find_reservable_retired_nodes(db):
     """Find all nodes that are retired but mistakenly marked reservable."""
