@@ -25,11 +25,11 @@ from hammers.slack import Slackbot
 from hammers.util import base_parser
 
 SAGE_UC_IP_WHITELIST = [
-    '192.5.87.32',
-    '192.5.87.59',
-    '192.5.87.77',
-    '192.5.87.136',
-    '192.5.87.164'
+    '192.5.87.31',
+    '192.5.87.126',
+    '192.5.87.128',
+    '192.5.87.159',
+    '192.5.87.162'
 ]
 
 def reaper(db, auth, grace_days, whitelist, dryrun=False):
