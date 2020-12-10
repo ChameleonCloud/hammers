@@ -2,13 +2,6 @@
 """
 Synchronizes the metadata contained in the G5K API to Blazar's "extra
 capabilities". Keys not in Blazar are created, those not in G5K are deleted.
-
-If using the soft removal option, you could follow up with a manual query
-to clean up the empty strings:
-
-.. code-block:: sql
-
-    DELETE FROM blazar.computehost_extra_capabilities WHERE capability_value='';
 """
 
 import collections
@@ -183,7 +176,7 @@ def main(argv=None):
     args = parser.parse_args(argv[1:])
     auth = osapi.Auth.from_env_or_args(args=args)
     dry_run = args.action == 'info'
-    ret = 0
+    any_updates = False
 
     blazar_hosts = get_blazar_hosts(auth)
     grid_hosts = get_g5k_hosts(auth)
@@ -197,10 +190,10 @@ def main(argv=None):
 
     if blazar_missing:
         print('Blazar missing node UIDs: {}'.format(blazar_missing))
-        ret = 1
+        any_updates = True
     if grid_missing:
         print('Grid missing node UIDs: {}'.format(grid_missing))
-        ret = 1
+        any_updates = True
 
     for uid in sorted(uids_both):
         gh = grid_hosts[uid]
@@ -208,7 +201,7 @@ def main(argv=None):
 
         actions = compare_host(gh, bh)
         if actions:
-            ret = 1
+            any_updates = True
 
         # collect updates instead of doing one-by-one to reduce number
         # of requests
@@ -247,7 +240,11 @@ def main(argv=None):
                 print("\tNODE ID: {}\n\tUpdate Detail: {}".format(
                     bh['id'], str(updates)))
 
-    return ret
+    if any_updates:
+        return 1
+    else:
+        print("Blazar and G5K repo are synced.")
+        return 0
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
