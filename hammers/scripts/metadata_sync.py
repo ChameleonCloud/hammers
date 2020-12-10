@@ -12,14 +12,12 @@ to clean up the empty strings:
 """
 
 import collections
-from six.moves.urllib.parse import urlparse
 import sys
 
 import requests
 import six
 
-from hammers import osapi, osrest, query
-from hammers.mysqlargs import MySqlArgs
+from hammers import osapi, osrest
 from hammers.util import base_parser
 
 
@@ -176,7 +174,7 @@ def main(argv=None):
 
     parser = base_parser(__doc__)
 
-    parser.add_argument('action', choices=['info', 'update'],
+    parser.add_argument('action', choices=['info', 'update'], default='info',
         help='Info only prints out actions to be taken without doing '
              'anything. Update does them.')
     parser.add_argument('-v', '--verbose', action='store_true')
