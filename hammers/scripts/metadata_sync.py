@@ -200,8 +200,6 @@ def main(argv=None):
         bh = blazar_hosts[uid]
 
         actions = compare_host(gh, bh)
-        if actions:
-            any_updates = True
 
         # collect updates instead of doing one-by-one to reduce number
         # of requests
@@ -228,10 +226,12 @@ def main(argv=None):
             else:
                 raise RuntimeError('unknown action "{}"'.format(action))
 
-        if dry_run:
-            continue
-
         if updates:
+            any_updates = True
+
+            if dry_run:
+                continue
+
             try:
                 osrest.blazar.host_update(auth, bh['id'], updates)
             except Exception as e:
