@@ -182,6 +182,7 @@ def main(argv=None):
     args = parser.parse_args(argv[1:])
     auth = osapi.Auth.from_env_or_args(args=args)
     dry_run = args.action == 'info'
+    ret = 0
 
     blazar_hosts = get_blazar_hosts(auth)
     grid_hosts = get_g5k_hosts(auth)
@@ -195,19 +196,22 @@ def main(argv=None):
 
     if blazar_missing:
         print('Blazar missing node UIDs: {}'.format(blazar_missing))
+        ret = 1
     if grid_missing:
         print('Grid missing node UIDs: {}'.format(grid_missing))
+        ret = 1
 
     for uid in sorted(uids_both):
         gh = grid_hosts[uid]
         bh = blazar_hosts[uid]
 
         actions = compare_host(gh, bh)
+        if actions:
+            ret = 1
 
         # collect updates instead of doing one-by-one to reduce number
         # of requests
         updates = {}
-        removals = []
         for action, action_args in actions:
             if action in {'add', 'replace'}:
                 key, value = action_args
@@ -242,6 +246,7 @@ def main(argv=None):
                 print("\tNODE ID: {}\n\tUpdate Detail: {}".format(
                     bh['id'], str(updates)))
 
+    return ret
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
