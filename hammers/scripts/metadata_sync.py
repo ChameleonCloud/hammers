@@ -174,30 +174,16 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    mysqlargs = MySqlArgs({
-        'user': 'root',
-        'password': '',
-        'host': 'localhost',
-        'port': 3306,
-    })
-
     parser = base_parser(__doc__)
 
-    mysqlargs.inject(parser) # --user, --password, --host, --port
     parser.add_argument('action', choices=['info', 'update'],
         help='Info only prints out actions to be taken without doing '
              'anything. Update does them.')
-    parser.add_argument('-s', '--soft-removal', action='store_true',
-        help='Soft removal, sets value to empty-string. Relieves database '
-             'access requirement.')
     parser.add_argument('-v', '--verbose', action='store_true')
 
     args = parser.parse_args(argv[1:])
     auth = osapi.Auth.from_env_or_args(args=args)
-    mysqlargs.extract(args)
     dry_run = args.action == 'info'
-    if not dry_run and not args.soft_removal:
-        db = mysqlargs.connect()
 
     blazar_hosts = get_blazar_hosts(auth)
     grid_hosts = get_g5k_hosts(auth)
@@ -238,18 +224,13 @@ def main(argv=None):
                           uid, action, key, value, old_value))
             elif action in {'remove'}:
                 key, = action_args
-                removals.append(key)
+                updates[key] = None
 
                 if dry_run or args.verbose:
                     print('{} {}({}) (old value: {})'.format(
                           uid, action, key, bh[key]))
             else:
                 raise RuntimeError('unknown action "{}"'.format(action))
-
-        if args.soft_removal:
-            while removals:
-                key = removals.pop()
-                updates[key] = ''
 
         if dry_run:
             continue
@@ -262,13 +243,7 @@ def main(argv=None):
                 print("UPDATE SKIPPED DUE TO ERROR")
                 print("\tNODE ID: {}\n\tUpdate Detail: {}".format(
                     bh['id'], str(updates)))
-        if removals:
-            for key in removals:
-                modified = query.remove_extra_capability(db, bh['id'], key)
-                if modified != 1:
-                    raise RuntimeError('delete query removed {} rows, expected 1'.format(modified))
 
-        db.db.commit()
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

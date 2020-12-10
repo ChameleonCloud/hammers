@@ -173,40 +173,6 @@ def floating_ips_to_leases(db, floating_ip_ids):
 
     return db.query(sql, args=floating_ip_ids, limit=None)
 
-@query
-def get_advanced_reservations_by_node_type(db):
-    """Return all leases on GPUs ordered by node id and lease start date."""
-    sql = '''
-    SELECT klu.name AS user_name
-        , ku.extra AS user_extra
-        , bl.user_id AS user_id
-        , bl.project_id AS project_id
-        , bl.id AS lease_id
-        , bl.start_date AS start_date
-        , bl.end_date AS end_date
-        , bce.capability_value AS node_type
-    FROM blazar.leases bl
-    RIGHT JOIN blazar.reservations br ON bl.id=br.lease_id
-    RIGHT JOIN blazar.computehost_allocations bca ON br.id=bca.reservation_id
-    RIGHT JOIN blazar.computehosts bc ON bca.compute_host_id=bc.id
-    LEFT JOIN blazar.computehost_extra_capabilities bce ON bc.id=bce.computehost_id
-    LEFT JOIN keystone.user ku ON bl.user_id=ku.id
-    LEFT JOIN keystone.local_user klu ON ku.id=klu.user_id
-    WHERE bl.start_date > CURDATE()
-        AND bc.id=bce.computehost_id
-        AND bce.capability_name='node_type'
-        AND (bce.capability_value LIKE 'gpu%'
-            OR bce.capability_value LIKE 'compute%'
-            OR bce.capability_value LIKE 'storage%'
-            OR bce.capability_value LIKE 'lowpower%'
-            OR bce.capability_value LIKE 'fpga'
-            OR bce.capability_value LIKE 'arm64'
-            OR bce.capability_value LIKE 'atom')
-        AND bl.deleted IS NULL
-    ORDER BY node_type, start_date ASC;
-    '''
-
-    return db.query(sql, limit=None)
 
 @query
 def owned_compute_ip_single(db, project_id):
@@ -227,6 +193,7 @@ def owned_compute_ip_single(db, project_id):
          ( p.device_owner LIKE 'compute%%' OR p.id is NULL );
     '''.format(projcol=project_col(db.version))
     return db.query(sql, args=[project_id], limit=None)
+
 
 @query
 def idle_not_reserved_floating_ips(db, threshold_days):
@@ -256,6 +223,7 @@ def idle_not_reserved_floating_ips(db, threshold_days):
     AND s.updated_at < UTC_TIMESTAMP() - INTERVAL %s DAY;
     '''
     return db.query(sql, args=[threshold_days], limit=None)
+
 
 @query
 def projects_with_unowned_ports(db, version='liberty'):
@@ -376,31 +344,6 @@ def clear_ironic_port_internalinfo(db, port_id):
     WHERE  uuid = %s;
     '''
     return db.query(sql, args=[port_id], no_rows=True)
-
-
-@query
-def remove_extra_capability(db, host_id, capability_name):
-    """
-    Remove an extra capability by name from `host_id`. (HTTP API doesn't
-    support this as of Feb 2018)
-    """
-    sql = '''\
-    DELETE FROM blazar.computehost_extra_capabilities
-    WHERE computehost_id = %s
-      AND capability_name = %s
-    '''
-    return db.query(sql, args=[host_id, capability_name], no_rows=True)
-
-
-@query
-def remove_extra_capability_sentinel(db, sentinel):
-    """Remove all extra capabilities with value `sentinel`. The HTTP
-    API could be used to mark them."""
-    sql = '''\
-    DELETE FROM blazar.computehost_extra_capabilities
-    WHERE capability_name = %s
-    '''
-    return db.query(sql, args=[sentinel], no_rows=True)
 
 
 @query
