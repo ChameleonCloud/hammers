@@ -29,6 +29,7 @@ GRID_ENDPOINTS = {
 }
 GRID_IGNORE_PREFIX = [
     'links',
+    'version',
 ]
 BLAZAR_IGNORE_PREFIX = [
     'id',
@@ -224,8 +225,6 @@ def main(argv=None):
         updates = {}
         removals = []
         for action, action_args in actions:
-                # print(uid, action, action_args)
-                # continue
             if action in {'add', 'replace'}:
                 key, value = action_args
                 updates[key] = str(value) # blazar likes strings
