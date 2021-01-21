@@ -131,6 +131,12 @@ class Auth(object):
             domain_info = {"id": self.rc['OS_PROJECT_DOMAIN_ID']}
         else:
             domain_info = {"name": self.rc['OS_PROJECT_DOMAIN_NAME']}
+        if 'OS_PROJECT_ID' in self.rc:
+            proj_auth_item = "id"
+            proj_info = self.rc['OS_PROJECT_ID']
+        else:
+            proj_auth_item = "name"
+            proj_info = self.rc['OS_PROJECT_NAME']
         
         response = requests.post(self.auth_url + '/auth/tokens', json={
             "auth": {
@@ -150,7 +156,7 @@ class Auth(object):
                 },
                 "scope": {
                     "project": {
-                        "name": self.rc['OS_PROJECT_NAME'],
+                        proj_auth_item: proj_info,
                         "domain": domain_info
                     }
                 }
