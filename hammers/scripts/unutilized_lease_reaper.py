@@ -24,10 +24,12 @@ from hammers.util import base_parser
 DEFAULT_WARN_HOURS = 6
 DEFAULT_GRACE_HOURS = 9
 EXCLUDED_PROJECT_IDS = [
-    '975c0a94b784483a885f4503f70af655',
-    '4ffe61cf850d4b45aef86b46411d33e1',
-    'd9faac3973a847f1b718fa765fe312e2',
-    'a40a60192c1b42ad9dcb40666663b0e3']
+    # Chameleon (TACC)
+    'f6c7696906c04b3c89fc3bda9a1b8be0',
+    # Chameleon (UC)
+    '4140e5f9f65545dbb9f0bdc90ef68d23',
+    # Maintenance
+    '4ffe61cf850d4b45aef86b46411d33e1']
 
 
 def parse_time(time, alt_format=False):
