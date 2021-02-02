@@ -13,10 +13,11 @@ import six
 from hammers import osapi, osrest
 from hammers.util import base_parser
 
-
+# FIXME: this should be looked up from sites.json from the G5k API
 GRID_ENDPOINTS = {
     'CHI@UC': 'https://api.chameleoncloud.org/sites/uc/clusters/chameleon/nodes',
     'CHI@TACC': 'https://api.chameleoncloud.org/sites/tacc/clusters/chameleon/nodes',
+    'CHI@NU': 'https://api.chameleoncloud.org/sites/nu/clusters/chameleon/nodes',
 }
 GRID_IGNORE_PREFIX = [
     'links',
