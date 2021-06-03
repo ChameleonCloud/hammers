@@ -26,7 +26,7 @@ def main(argv=None):
     )
 
     auth.add_arguments(parser)
-    parser.add_argument('--node-type', type=str, default='compute_haswell',
+    parser.add_argument('--node-type', type=str, default='compute_skylake',
         help='Node type to launch. May be custom or likely one of: {}'.format(
             ', '.join("'{}'".format(nt) for nt in NODE_TYPES)
         ))

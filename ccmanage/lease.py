@@ -24,7 +24,6 @@ __all__ = ['lease_create_args', 'lease_create_nodetype', 'Lease',
 
 BLAZAR_TIME_FORMAT = '%Y-%m-%d %H:%M'
 NODE_TYPES = {
-    'compute_haswell',
     'compute_skylake',
     'compute_haswell_ib',
     'storage',
@@ -38,7 +37,7 @@ NODE_TYPES = {
     'atom',
     'arm64',
 }
-DEFAULT_NODE_TYPE = 'compute_haswell'
+DEFAULT_NODE_TYPE = 'compute_skylake'
 DEFAULT_LEASE_LENGTH = datetime.timedelta(days=1)
 
 
@@ -102,7 +101,7 @@ def lease_create_nodetype(*args, **kwargs):
     Wrapper for :py:func:`lease_create_args` that adds the
     ``resource_properties`` payload to specify node type.
 
-    :param str node_type: Node type to filter by, ``compute_haswell``, et al.
+    :param str node_type: Node type to filter by, ``compute_skylake``, et al.
     :raises ValueError: if there is no `node_type` named argument.
     """
     try:
@@ -158,7 +157,7 @@ class Lease(object):
 
     .. code-block:: python
 
-        with Lease(session, node_type='compute_haswell') as lease:
+        with Lease(session, node_type='compute_skylake') as lease:
             instance = lease.create_server()
             ...
 

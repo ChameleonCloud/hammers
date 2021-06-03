@@ -46,8 +46,8 @@ installed like the hammers scripts.
                             'compute_skylake', 'gpu_p100',
                             'gpu_p100_nvlink', 'gpu_k80', 'gpu_m40',
                             'compute_haswell_ib', 'storage', 'atom',
-                            'compute_haswell', 'storage_hierarchy', 'arm64',
-                            'fpga', 'lowpower_xeon' (default: compute_haswell)
+                            'storage_hierarchy', 'arm64', 'fpga',
+                            'lowpower_xeon' (default: compute_skylake)
     --key-name KEY_NAME   SSH keypair name on OS used to create an instance.
                             Must exist in Nova (default: default)
     --image IMAGE         Name or ID of image to launch. (default: CC-CentOS7)

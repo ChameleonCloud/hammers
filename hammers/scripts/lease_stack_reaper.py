@@ -30,7 +30,7 @@ EXCLUDED_PROJECT_IDS = [
     'd9faac3973a847f1b718fa765fe312e2',
     'a40a60192c1b42ad9dcb40666663b0e3'] ##LSS Institute
 EXCLUDED_NODE_TYPES = [
-    'compute_haswell'
+    'compute_skylake'
 ]
 
 
