@@ -28,7 +28,13 @@ EXCLUDED_PROJECT_IDS = [
     '975c0a94b784483a885f4503f70af655',
     '4ffe61cf850d4b45aef86b46411d33e1',
     'd9faac3973a847f1b718fa765fe312e2',
-    'a40a60192c1b42ad9dcb40666663b0e3'] ##LSS Institute
+    'a40a60192c1b42ad9dcb40666663b0e3',  ## LSS Institute
+    '33b9a8773f8d449ba4f376d3308f2b64',  ## SCC21 UIUC
+    '84b6b38e780e4034b524539a33365d8d',  ## SCC21 Texas A&M
+    'a709807765104869b0387b0b6d5882f7',  ## SCC21 Sun Yat-Sen
+    '8e9c3d32161d4878a817394c6427345e',  ## SCC21 ETH Zurich
+    '33b9a8773f8d449ba4f376d3308f2b64',  ## SCC21 Monash
+] 
 EXCLUDED_NODE_TYPES = [
     'compute_skylake'
 ]
