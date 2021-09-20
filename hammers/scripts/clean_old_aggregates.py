@@ -111,7 +111,7 @@ def has_active_allocation(orph):
         alloc for alloc in host_allocs
         if alloc['resource_id'] == orph
     ]
-    if not matching_allocs:
+    if not matching_allocs or not matching_allocs[0]['reservations']:
         return False
     res = matching_allocs[0]['reservations'][0]['id']
     return res
