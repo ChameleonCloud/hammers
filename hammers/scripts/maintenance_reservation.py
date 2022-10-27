@@ -131,7 +131,7 @@ def reserve(sess, node, start_time, requested_hours, reason, operator, dryrun):
     if not dryrun:
         blazar = blazar_client.Client(
             1, session=sess, service_type='reservation')
-        resource_properties = '["=", "$uid", "{node_uuid}"]'.format(
+        resource_properties = '["=", "$hypervisor_hostname", "{node_uuid}"]'.format(
             node_uuid=node.uuid)
         phys_res = {'min': "1", 'max': "1", 'hypervisor_properties': "",
                     'resource_properties': resource_properties, 'resource_type': 'physical:host'}
