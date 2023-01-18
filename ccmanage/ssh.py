@@ -1,6 +1,7 @@
 
 
-import collections
+from collections.abc import Callable
+from collections import Counter
 import errno
 import os
 import socket
@@ -42,13 +43,13 @@ def dotdotdot(*args, **kwargs):
 def wait(host, username, callback='dots'):
     # error_counts = {exc_type: 0 for exc_type in expected_wait_errors}
     # sub_errors = 0
-    error_counts = collections.Counter()
+    error_counts = Counter()
     if callback == 'dots':
         callback = dotdotdot
     elif callback is None:
         callback = _nothing
     else:
-        if not isinstance(callback, collections.Callable):
+        if not isinstance(callback, Callable):
             raise ValueError("callback isn't callable.")
 
     key_filename = fapi.env.key_filename

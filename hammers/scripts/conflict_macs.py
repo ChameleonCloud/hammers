@@ -12,7 +12,7 @@ config---otherwise the script would think that they are in conflict.
 '''
 
 
-import collections
+from collections import Counter
 import configparser
 import json
 import os
@@ -130,7 +130,7 @@ def find_conflicts(auth, ignore_subnets):
         mac_collisions = [
             (mac, count)
             for mac, count
-            in collections.Counter(macs).items()
+            in Counter(macs).items()
             if count > 1
         ]
         message_lines = []

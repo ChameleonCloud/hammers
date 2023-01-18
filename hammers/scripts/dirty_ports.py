@@ -15,7 +15,7 @@ ports on nodes that are in the "available" state.
 
 import sys
 import os
-import collections
+from collections import defaultdict
 # import datetime
 # from pprint import pprint
 
@@ -28,7 +28,7 @@ from hammers.util import base_parser
 OS_ENV_PREFIX = 'OS_'
 
 def ports_by_node(ports, assert_single=False):
-    node_ports = collections.defaultdict(list)
+    node_ports = defaultdict(list)
     for port_id, port in ports.items():
         node_ports[port['node_uuid']].append(port)
     node_ports.default_factory = None

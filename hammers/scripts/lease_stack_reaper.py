@@ -8,7 +8,7 @@ Reclaims nodes from leases that violate terms of use.
 
 * ``info`` to just display leases or actuall delete them with ``delete``
 '''
-import collections
+from collections import defaultdict
 import sys
 from pprint import pprint
 from datetime import datetime
@@ -34,7 +34,7 @@ EXCLUDED_PROJECT_IDS = [
     '22521dca92d042f3b98c30bf02c50491',  ## SCC21 CHI-210869
     '5e979a2c26844f2aa62f1342205cd79b',  ## SCC21 CHI-210870
     'b23da57cc66f4ea9add421e635a293a2',  ## SCC21 CHI-210878
-] 
+]
 EXCLUDED_NODE_TYPES = [
     'compute_skylake'
 ]
@@ -48,7 +48,7 @@ class User:
         self.user_id = user_id
         self.name = name
         self.email = email
-        self.nodes = collections.defaultdict(list)
+        self.nodes = defaultdict(list)
 
     def add_lease(self, node_type, lease):
         """Add lease to node list."""
@@ -68,7 +68,7 @@ class User:
         for node_type, leases in self.nodes.items():
             if node_type in EXCLUDED_NODE_TYPES:
                 continue
-            
+
             if 'gpu_' in node_type:
                 gpu_day_violation = self.find_gpu_days_limit_leases(leases)
                 leases_to_delete.update(gpu_day_violation)
@@ -156,7 +156,7 @@ def collect_user_leases(auth):
     users = {}
     users_by_id = keystone.users(auth)
     hosts_by_id = blazar.hosts(auth)
-    allocs_by_lease = collections.defaultdict(list)
+    allocs_by_lease = defaultdict(list)
 
     for alloc in blazar.host_allocations(auth):
         for r in alloc['reservations']:
