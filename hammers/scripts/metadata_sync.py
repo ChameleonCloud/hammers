@@ -4,7 +4,7 @@ Synchronizes the metadata contained in the G5K API to Blazar's "extra
 capabilities". Keys not in Blazar are created, those not in G5K are deleted.
 """
 
-import collections
+from collections.abc import Mapping, Iterable, Sequence
 import sys
 
 import requests
@@ -53,7 +53,7 @@ def ignore_keys(keys, prefixes):
 
 
 def nonstringiterable(arg):
-    return (isinstance(arg, collections.Iterable)
+    return (isinstance(arg, Iterable)
             and not isinstance(arg, six.string_types))
 
 
@@ -62,9 +62,9 @@ def _flatten_to_dots(obj, prefix=None):
         prefix = []
 
     if nonstringiterable(obj):
-        if isinstance(obj, collections.Sequence): # list-like, integer keys
+        if isinstance(obj, Sequence): # list-like, integer keys
             items = enumerate(obj)
-        elif isinstance(obj, collections.Mapping): # dict-like, string keys
+        elif isinstance(obj, Mapping): # dict-like, string keys
             items = list(obj.items())
         else:
             raise RuntimeError('unhandlable type')

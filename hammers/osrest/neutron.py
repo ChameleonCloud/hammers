@@ -1,4 +1,4 @@
-import collections
+from collections.abc import Mapping
 
 from hammers.osrest.base import BaseAPI
 
@@ -8,7 +8,7 @@ API = BaseAPI('network')
 
 def floatingip_delete(auth, floatingip):
     """Frees a floating IP by ID"""
-    if isinstance(floatingip, collections.Mapping):
+    if isinstance(floatingip, Mapping):
         floatingip = floatingip['id']
 
     response = API.delete(auth, '/v2.0/floatingips/{}'.format(floatingip))
@@ -26,7 +26,7 @@ def floatingips(auth):
 
 def network(auth, net):
     """Gets a network by ID, or mapping containing an ``'id'`` key."""
-    if isinstance(net, collections.Mapping):
+    if isinstance(net, Mapping):
         net = net['id']
 
     response = API.get(auth, '/v2.0/networks/{}'.format(net))
@@ -43,7 +43,7 @@ def networks(auth):
 
 def port_delete(auth, port):
     """Deletes a port by ID, or mapping containing an ``'id'`` key."""
-    if isinstance(port, collections.Mapping):
+    if isinstance(port, Mapping):
         port = port['id']
 
     response = API.delete(auth,  '/v2.0/ports/{}'.format(port))
@@ -61,7 +61,7 @@ def ports(auth):
 
 def subnet(auth, subnet):
     """Get subnet info. Accepts ID or mapping containing an ``'id'`` key."""
-    if isinstance(subnet, collections.Mapping):
+    if isinstance(subnet, Mapping):
         subnet = subnet['id']
 
     response = API.get(auth, '/v2.0/subnets/{}'.format(subnet))
