@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "hammers"
+version = "0.1.0"
+description = "'Bag of hammers to fix problems'"
+authors = ["Michael Sherman <shermanm@uchicago.edu>"]
+license = "Apache"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+python-keystoneclient = "^5.0.1"
+python-ironicclient = "^5.0.1"
+python-blazarclient = "^3.5.0"
+python-glanceclient = "^4.2.0"
+python-novaclient = "^18.2.0"
+python-neutronclient = "^8.2.1"
+python-swiftclient = "^4.1.0"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+conflict-macs = 'hammers.scripts.conflict_macs:main'
+curiouser = 'hammers.scripts.curiouser:main'
+dirty-ports = 'hammers.scripts.dirty_ports:main'
+lease-stack-reaper = 'hammers.scripts.lease_stack_reaper:main'
+maintenance-reservation = 'hammers.scripts.maintenance_reservation:main'
+metadata-sync = 'hammers.scripts.metadata_sync:main'
+neutron-reaper = 'hammers.scripts.neutron_reaper:main'
+ironic-error-resetter = 'hammers.scripts.ironic_error_resetter:main'
+orphan-resource-providers = 'hammers.scripts.orphan_resource_providers:main'
+undead-instances = 'hammers.scripts.undead_instances:main'
+reservation-usage-notification = 'hammers.scripts.reservation_usage_notification:main'
+orphans-detector = 'hammers.scripts.orphans_detector:main'
+clean-old-aggregates = 'hammers.scripts.clean_old_aggregates:main'
+floatingip-reaper = 'hammers.scripts.floatingip_reaper:main'
+unutilized-lease-reaper = 'hammers.scripts.unutilized_lease_reaper:main'
+node-doctor = 'hammers.scripts.node_doctor:main'
+retirement-enforcer = 'hammers.scripts.enforce_retirement:main'
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
