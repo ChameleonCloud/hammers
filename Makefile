@@ -1,4 +1,4 @@
-DOCKER_REGISTRY ?= docker.chameleoncloud.org
+DOCKER_REGISTRY ?= ghcr.io/chameleoncloud
 DOCKER_TAG ?= latest
 
 DOCKER_IMAGE = $(DOCKER_REGISTRY)/hammers:$(DOCKER_TAG)
