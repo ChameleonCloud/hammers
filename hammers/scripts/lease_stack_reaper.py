@@ -71,10 +71,19 @@ class User:
 
             if 'gpu_' in node_type:
                 gpu_day_violation = self.find_gpu_days_limit_leases(leases)
+                self.print_info(
+                    gpu_day_violation,
+                    "These leases are in violation of gpu days limit"
+                )
                 leases_to_delete.update(gpu_day_violation)
 
             stacked_leases = self.find_stacked_leases(leases)
-            leases_to_delete.update(stacked_leases[LEASES_ALLOWED:])
+            stacked_leases_to_delete = stacked_leases[LEASES_ALLOWED:]
+            self.print_info(
+                stacked_leases_to_delete,
+                "These leases are stacked on each other"
+            )
+            leases_to_delete.update(stacked_leases_to_delete)
 
         return leases_to_delete
 
@@ -127,12 +136,14 @@ class User:
             x['id'] for x in stacked
             if (x['end_date'] - x['start_date']).days > 1]
 
-    def print_info(self, lease_ids):
+    def print_info(self, lease_ids, reason):
         """Return dict of info for console output."""
         return {
             'user_name': self.name,
             'user_email': self.email,
-            'leases': lease_ids}
+            'leases': lease_ids,
+            'reason': reason
+        }
 
 
 def send_delete_notification(gpu_user, lease_ids, sender):
@@ -225,13 +236,14 @@ def main(argv=None):
         for user in list(users.values()):
             leases_in_violation = user.leases_in_violation()
 
-            if leases_in_violation:
-                if args.action == 'delete':
-                    lease_delete_count += len(leases_in_violation)
-                    [blazar.lease_delete(auth, l) for l in leases_in_violation]
-                    send_delete_notification(user, leases_in_violation, sender)
-                else:
-                    pprint(user.print_info(leases_in_violation))
+            if leases_in_violation and args.action == 'delete':
+                print(
+                    f"deleting the leases {leases_in_violation} "
+                    "that are violating lease stacking restriction"
+                )
+                lease_delete_count += len(leases_in_violation)
+                [blazar.lease_delete(auth, l) for l in leases_in_violation]
+                send_delete_notification(user, leases_in_violation, sender)
 
         if lease_delete_count > 0:
             if slack:
