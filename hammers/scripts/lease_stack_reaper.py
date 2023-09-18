@@ -71,18 +71,18 @@ class User:
 
             if 'gpu_' in node_type:
                 gpu_day_violation = self.find_gpu_days_limit_leases(leases)
-                self.print_info(
+                pprint(self.print_info(
                     gpu_day_violation,
                     "These leases are in violation of gpu days limit"
-                )
+                ))
                 leases_to_delete.update(gpu_day_violation)
 
             stacked_leases = self.find_stacked_leases(leases)
             stacked_leases_to_delete = stacked_leases[LEASES_ALLOWED:]
-            self.print_info(
+            pprint(self.print_info(
                 stacked_leases_to_delete,
                 "These leases are stacked on each other"
-            )
+            ))
             leases_to_delete.update(stacked_leases_to_delete)
 
         return leases_to_delete
