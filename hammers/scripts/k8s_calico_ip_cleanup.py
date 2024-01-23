@@ -60,11 +60,12 @@ def get_offline_nodes():
         offline_nodes = [
             node.metadata.name
             for node in nodes.items
-            if node.status.conditions is None
-            or all(
-                cond.status != "True"
-                for cond in node.status.conditions
-                if cond.type == "Ready"
+            if (
+                node.status.conditions is None
+                or all(
+                    cond.type != "Ready" and cond.status == "Unknown"
+                    for cond in node.status.conditions
+                )
             )
         ]
 
