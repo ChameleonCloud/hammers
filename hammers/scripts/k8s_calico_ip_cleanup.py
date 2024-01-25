@@ -56,18 +56,6 @@ def get_offline_nodes():
 
         nodes = v1.list_node(watch=False)
 
-        # Filter nodes based on their status (considered offline if not ready)
-        offline_nodes = [
-            node.metadata.name
-            for node in nodes.items
-            if (
-                node.status.conditions is None
-                or all(
-                    cond.type != "Ready" and cond.status == "Unknown"
-                    for cond in node.status.conditions
-                )
-            )
-        ]
 
         offline_nodes = [
             node.metadata.name
