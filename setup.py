@@ -39,6 +39,7 @@ setup(
             'unutilized-lease-reaper = hammers.scripts.unutilized_lease_reaper:main',
             'node-doctor = hammers.scripts.node_doctor:main',
             'retirement-enforcer = hammers.scripts.enforce_retirement:main'
+            'k8s-calico-ip-cleanup = hammers.scripts.k8s_calico_ip_cleanup:main'
         ],
     },
 
