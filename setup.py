@@ -25,7 +25,7 @@ setup(
             'conflict-macs = hammers.scripts.conflict_macs:main',
             'curiouser = hammers.scripts.curiouser:main',
             'dirty-ports = hammers.scripts.dirty_ports:main',
-            'lease-stack-reaper = hammers.scripts.lease_stack_reaper:main',
+            'lease-stack-notifier = hammers.scripts.lease_stack_notifier:main',
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
             'metadata-sync = hammers.scripts.metadata_sync:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
@@ -53,6 +53,7 @@ setup(
     install_requires=[
         'python-dateutil',
         'requests',
+        'python-chi'
         # 'mysqlclient>=1.3.6', # assume this is installed; could also be mysql-python
     ],
 )
