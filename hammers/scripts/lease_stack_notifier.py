@@ -135,7 +135,7 @@ class Project:
             lambda: DATETIME_NOW + self.minimum_lease_window
         )
         self.start_date_by_host = defaultdict(lambda: DATETIME_NOW)
-        self.start_date_by_node_type = defaultdict(lambda: DATETIME_NOW)
+        self.start_date_by_node_type = defaultdict(lambda: datetime.max)
 
     def __str__(self):
         return {

@@ -357,7 +357,7 @@ class TestLeaseComplianceManager(unittest.TestCase):
             'reservations': [
                 {'lease_id': 'lease3'},
             ]
-        },{
+        }, {
             'resource_id': 'host1',
             'reservations': [
                 {'lease_id': 'lease4'},
@@ -395,6 +395,43 @@ class TestLeaseComplianceManager(unittest.TestCase):
             'resource_id': 'host1',
             'reservations': [
                 {'lease_id': 'lease4'},
+            ]
+        }]
+        self.run_test_scenario(
+            leases,
+            'project1',
+            allocations,
+            expected_violations={
+                'compute_skylake': {'coverage_percentage': 1.0}
+            }
+        )
+
+    def test_lease_duration_violation_late_start(self):
+        leases = [
+            create_lease('lease2', 7, 14),
+            create_lease('lease3', 14, 21),
+            create_lease('lease4', 21, 28),
+            create_lease('lease5', 28, 34),
+        ]
+        allocations = [{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease2'},
+            ]
+        }, {
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease3'},
+            ]
+        }, {
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease4'},
+            ]
+        },{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease5'},
             ]
         }]
         self.run_test_scenario(
