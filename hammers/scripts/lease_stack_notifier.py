@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 
 import openstack
 from blazarclient.client import Client as BlazarClient
+from keystoneclient.v3.client import Client as KeystoneClient
 from dateutil.parser import parse as datetime_parse
 
 from hammers.notifications import _email
@@ -385,14 +386,15 @@ def main(argv=None):
     conn = openstack.connect(cloud='envvars')
     sess = conn.session
     blazar = BlazarClient("1", session=sess)
+    keystone = KeystoneClient(session=sess)
     print("Getting hosts")
     hosts = blazar.host.list()
     print("Getting leases")
     leases = blazar.lease.list()
     print("Getting allocations")
     allocations = blazar.allocation.list("os-hosts")
-    projects = conn.identity.projects
-    project_charge_code_map = {p.id: p.name.lower() for p in projects()}
+    projects = keystone.projects.list()
+    project_charge_code_map = {p.id: p.name.lower() for p in projects}
     json.dumps(project_charge_code_map, indent=2)
     lcm = LeaseComplianceManager(config, leases, hosts, allocations)
 
