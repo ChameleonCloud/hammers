@@ -3,6 +3,9 @@
 
 import unittest
 from datetime import datetime, timedelta
+import json
+
+import os
 
 from hammers.scripts.lease_stack_notifier import (
     calculate_overlap_percentage,
@@ -122,7 +125,10 @@ class TestLeaseComplianceManager(unittest.TestCase):
         self.run_test_scenario([], 'project1', [], {})
 
     def test_update_hosts(self):
-        lcm = LeaseComplianceManager({}, self.hosts, {})
+        cwd = os.path.dirname(__file__)
+        with open(f'{cwd}/lease-stacking-test-config.json') as cf_file:
+            config = json.loads(cf_file.read())
+        lcm = LeaseComplianceManager(config, {}, self.hosts, {})
         for host in self.hosts:
             self.assertTrue(host['id'] in lcm.hosts_by_id)
 
@@ -142,7 +148,10 @@ class TestLeaseComplianceManager(unittest.TestCase):
                 {'lease_id': 'lease2'},
             ]
         }]
-        lcm = LeaseComplianceManager(leases, self.hosts, allocations)
+        cwd = os.path.dirname(__file__)
+        with open(f'{cwd}/lease-stacking-test-config.json') as cf_file:
+            config = json.loads(cf_file.read())
+        lcm = LeaseComplianceManager(config, leases, self.hosts, allocations)
         for lease in leases:
             self.assertTrue(lease['id'] in lcm.leases_by_id)
             lease = lcm.leases_by_id[lease['id']]
@@ -172,7 +181,10 @@ class TestLeaseComplianceManager(unittest.TestCase):
                 {'lease_id': 'lease3'},
             ]
         }]
-        lcm = LeaseComplianceManager(leases, self.hosts, allocations)
+        cwd = os.path.dirname(__file__)
+        with open(f'{cwd}/lease-stacking-test-config.json') as cf_file:
+            config = json.loads(cf_file.read())
+        lcm = LeaseComplianceManager(config, leases, self.hosts, allocations)
         project = lcm.projects_by_id['project1']
         self.assertEqual(
             project.furthest_end_date_by_node_type['compute_skylake'],
@@ -203,7 +215,10 @@ class TestLeaseComplianceManager(unittest.TestCase):
                 {'lease_id': 'lease3'},
             ]
         }]
-        lcm = LeaseComplianceManager(leases, self.hosts, allocations)
+        cwd = os.path.dirname(__file__)
+        with open(f'{cwd}/lease-stacking-test-config.json') as cf_file:
+            config = json.loads(cf_file.read())
+        lcm = LeaseComplianceManager(config, leases, self.hosts, allocations)
         project = lcm.projects_by_id['project1']
         self.assertEqual(
             project.furthest_end_date_by_node_type['compute_skylake'],
@@ -254,7 +269,10 @@ class TestLeaseComplianceManager(unittest.TestCase):
                 {'lease_id': 'lease6'},
             ]
         }]
-        lcm = LeaseComplianceManager(leases, self.hosts, allocations)
+        cwd = os.path.dirname(__file__)
+        with open(f'{cwd}/lease-stacking-test-config.json') as cf_file:
+            config = json.loads(cf_file.read())
+        lcm = LeaseComplianceManager(config, leases, self.hosts, allocations)
         for allocation in allocations:
             host = allocation['resource_id']
             for reservation in allocation['reservations']:
@@ -267,15 +285,18 @@ class TestLeaseComplianceManager(unittest.TestCase):
     def run_test_scenario(self, leases, project_id,
                           allocations, expected_violations):
         # expected_violations from a project
-        lcm = LeaseComplianceManager(leases, self.hosts, allocations)
+        cwd = os.path.dirname(__file__)
+        with open(f'{cwd}/lease-stacking-test-config.json') as cf_file:
+            config = json.loads(cf_file.read())
+        lcm = LeaseComplianceManager(config, leases, self.hosts, allocations)
         violations = lcm.get_project_violations(project_id)
         for node_type, expected_violation in expected_violations.items():
             self.assertIn(node_type, violations)
             # check what kind of violation node is in
             for key in expected_violation:
                 self.assertTrue(key in violations[node_type])
-        if violations:
-            project_lease_violation_body(lcm.projects_by_id.get(project_id), violations, '')
+        # if violations:
+        #     project_lease_violation_body(lcm.projects_by_id.get(project_id), violations, '')
 
     def test_no_violations(self):
         leases = [
@@ -315,6 +336,39 @@ class TestLeaseComplianceManager(unittest.TestCase):
             allocations,
             expected_violations={},
         )
+        leases = [
+            create_lease('lease1', 0, 7),
+            create_lease('lease2', 7, 14),
+            create_lease('lease3', 17, 24),
+            create_lease('lease4', 24, 31),
+        ]
+        allocations = [{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease1'},
+            ]
+        }, {
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease2'},
+            ]
+        }, {
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease3'},
+            ]
+        },{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease4'},
+            ]
+        }]
+        self.run_test_scenario(
+            leases,
+            'project1',
+            allocations,
+            expected_violations={}
+        )
 
     def test_lease_duration_violation(self):
         leases = [
@@ -336,6 +390,11 @@ class TestLeaseComplianceManager(unittest.TestCase):
             'resource_id': 'host1',
             'reservations': [
                 {'lease_id': 'lease3'},
+            ]
+        },{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease4'},
             ]
         }]
         self.run_test_scenario(

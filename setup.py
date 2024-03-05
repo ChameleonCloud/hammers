@@ -53,7 +53,6 @@ setup(
     install_requires=[
         'python-dateutil',
         'requests',
-        'python-chi'
         # 'mysqlclient>=1.3.6', # assume this is installed; could also be mysql-python
     ],
 )

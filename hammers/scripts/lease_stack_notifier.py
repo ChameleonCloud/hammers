@@ -13,27 +13,15 @@ import sys
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from chi import blazar, keystone
-from chi.context import session
+import openstack
+from blazarclient.client import Client as BlazarClient
 from dateutil.parser import parse as datetime_parse
 
 from hammers.notifications import _email
 from hammers.util import base_parser
 
-# 90% coverage considered as violation
-LEASE_COVERAGE_THRESHOLD = 0.9
-# 50% node coverage considered as violation
-HIGH_END_NODE_COVERAGE_THRESHOLD = 0.5
-# Current UTC datetime
+
 DATETIME_NOW = datetime.utcnow()
-MINIMUM_LEASE_WINDOW = timedelta(days=21)
-# Threshold for the number of nodes for node coverage consideration
-MAX_NODES_FOR_NODE_COVERAGE = 4
-# Example: ['compute_skylake']
-EXCLUDED_NODE_TYPES = []
-# excludes the high end node types for node coverage notification
-EXCLUDED_HIGH_END_NODE_TYPES = []
-SENDER_EMAIL = "noreply@chameleoncloud.org"
 SECONDS_IN_DAY = timedelta(days=1).total_seconds()
 
 
@@ -138,11 +126,12 @@ class Lease:
 
 class Project:
     """ Represents a project with leases """
-    def __init__(self, project_id):
+    def __init__(self, project_id, minimum_lease_window_days=21):
         self.project_id = project_id
         self.leases = set()
+        self.minimum_lease_window = timedelta(days=minimum_lease_window_days)
         self.furthest_end_date_by_node_type = defaultdict(
-            lambda: DATETIME_NOW + MINIMUM_LEASE_WINDOW
+            lambda: DATETIME_NOW + self.minimum_lease_window
         )
         self.start_date_by_host = defaultdict(lambda: DATETIME_NOW)
         self.start_date_by_node_type = defaultdict(lambda: DATETIME_NOW)
@@ -204,9 +193,8 @@ class Project:
                 coverage_by_node_type[host.node_type] += seconds_covered
         return coverage_by_node_type
 
-    def get_lease_stacking_violations(self, excluded_node_types):
+    def get_lease_stacking_violations(self, excluded_node_types, lease_coverage_threshold):
         coverage_by_node_type = self.get_coverage_by_node_type()
-
         # Check for violations based on coverage percentage
         violations = {}
         for node_type, seconds_covered in coverage_by_node_type.items():
@@ -218,33 +206,106 @@ class Project:
                 - self.start_date_by_node_type[node_type]
             ).total_seconds()
             coverage_percentage = seconds_covered / seconds_in_coverage_period
-            if coverage_percentage >= LEASE_COVERAGE_THRESHOLD:
+
+            if coverage_percentage >= lease_coverage_threshold:
                 violations[node_type] = self._summarize_stacking_violation(
                     seconds_covered, seconds_in_coverage_period
                 )
         return violations
 
-    def get_high_end_hogging_violations(self, node_type_counts,
-                                        high_end_node_types):
+    def get_high_end_hogging_violations(
+        self, node_type_counts,
+        high_end_node_types, high_end_node_coverage_threshold,
+        min_nodes_for_coverage
+    ):
         nodes_reserved_in_month = defaultdict(int)
         violations = {}
         for lease in self.leases:
             for host in lease.hosts:
                 # check if lease end is within the check window
-                if DATETIME_NOW <= lease.end <= DATETIME_NOW + MINIMUM_LEASE_WINDOW:
+                if DATETIME_NOW <= lease.end <= DATETIME_NOW + self.minimum_lease_window:
                     nodes_reserved_in_month[host.node_type] += 1
         for node_type, node_counts in nodes_reserved_in_month.items():
             if high_end_node_types and node_type not in high_end_node_types:
                 print(f"{node_type} - not included as high end")
                 continue
             total_nodes = node_type_counts[node_type]
-            if total_nodes <= MAX_NODES_FOR_NODE_COVERAGE:
+            if total_nodes <= min_nodes_for_coverage:
                 continue
-            if node_counts > HIGH_END_NODE_COVERAGE_THRESHOLD * total_nodes:
+            if node_counts > high_end_node_coverage_threshold * total_nodes:
                 violations[node_type] = {
                     "total_nodes": total_nodes,
                     "nodes_reserved": node_counts,
                 }
+        return violations
+
+
+class LeaseComplianceManager:
+    def __init__(self, config, leases, hosts, allocations):
+        """ Manager for checking if leases comply with lease stacking policy
+
+        Args:
+            config (dict)
+            leases (list)
+            hosts (list)
+            allocations (list)
+            sender_email (str, optional)
+        """
+        self.config = config
+        self.leases = leases
+        self.hosts = hosts
+        self.allocations = allocations
+        self.sender_email = config['sender_email']
+        self.hosts_by_id = {}
+        self.leases_by_id = {}
+        self.projects_by_id = {}
+        self.node_type_counts = defaultdict(int)
+        self._update_hosts()
+        self._update_leases()
+        self._update_from_allocations()
+
+    def _update_hosts(self):
+        for host in self.hosts:
+            node_type = host["node_type"]
+            host_id = host["id"]
+            self.hosts_by_id[host_id] = Host(host_id, node_type)
+            self.node_type_counts[node_type] += 1
+
+    def _update_leases(self):
+        # creates lease objects and adds leases to projects
+        for lease_details in self.leases:
+            lease_id = lease_details['id']
+            if lease_details['status'].lower() in ['terminated', 'error', 'deleting']:
+                continue
+            lease = Lease(lease_details)
+            self.leases_by_id[lease_id] = lease
+
+    def _update_from_allocations(self):
+        # adds hosts to the leases they are allocated to
+        for allocation in self.allocations:
+            for reservation in allocation['reservations']:
+                lease = self.leases_by_id.get(reservation['lease_id'])
+                if lease:
+                    host = self.hosts_by_id[allocation['resource_id']]
+                    lease.add_host(host)
+                    project_id = lease.project_id
+                    project = self.projects_by_id.get(project_id, Project(project_id))
+                    project.add_lease(lease)
+                    self.projects_by_id[project_id] = project
+
+    def get_project_violations(self, project_id):
+        violations = {}
+        project = self.projects_by_id.get(project_id)
+        if not project:
+            return violations
+        violations.update(project.get_lease_stacking_violations(
+            self.config['exclude_node_types'], self.config['lease_coverage_threshold']
+        ))
+        violations.update(project.get_high_end_hogging_violations(
+            self.node_type_counts,
+            self.config['high_end_node_types'], self.config['high_end_node_coverage_threshold'],
+            self.config['min_nodes_for_coverage']
+        ))
         return violations
 
 
@@ -286,66 +347,6 @@ def project_lease_violation_body(project, project_violations,
     return body
 
 
-class LeaseComplianceManager:
-    def __init__(self, leases, hosts, allocations,
-                 sender_email=SENDER_EMAIL):
-        self.leases = leases
-        self.hosts = hosts
-        self.allocations = allocations
-        self.sender_email = sender_email
-        self.hosts_by_id = {}
-        self.leases_by_id = {}
-        self.projects_by_id = {}
-        self.node_type_counts = defaultdict(int)
-        self._update_hosts()
-        self._update_leases()
-        self._update_from_allocations()
-
-    def _update_hosts(self):
-        for host in self.hosts:
-            node_type = host["node_type"]
-            host_id = host["id"]
-            self.hosts_by_id[host_id] = Host(host_id, node_type)
-            self.node_type_counts[node_type] += 1
-
-    def _update_leases(self):
-        # creates lease objects and adds leases to projects
-        for lease_details in self.leases:
-            lease_id = lease_details['id']
-            if lease_details['status'].lower() in ['terminated', 'error', 'deleting']:
-                continue
-            lease = Lease(lease_details)
-            self.leases_by_id[lease_id] = lease
-
-    def _update_from_allocations(self):
-        # adds hosts to the leases they are allocated to
-        for allocation in self.allocations:
-            for reservation in allocation['reservations']:
-                lease = self.leases_by_id.get(reservation['lease_id'])
-                if lease:
-                    host = self.hosts_by_id[allocation['resource_id']]
-                    lease.add_host(host)
-                    project_id = lease.project_id
-                    project = self.projects_by_id.get(project_id, Project(project_id))
-                    project.add_lease(lease)
-                    self.projects_by_id[project_id] = project
-
-    def get_project_violations(self, project_id, exclude_node_types,
-                               high_end_node_types):
-        violations = {}
-        project = self.projects_by_id.get(project_id)
-        if not project:
-            return violations
-        violations.update(project.get_lease_stacking_violations(
-            exclude_node_types
-        ))
-        violations.update(project.get_high_end_hogging_violations(
-            self.node_type_counts,
-            high_end_node_types
-        ))
-        return violations
-
-
 def notify_lease_violations(project_id, message_body, send_to, sender):
     """Notify the lease stacking violations."""
     subject = f"Lease Stacking Violation Detected - {project_id}"
@@ -373,71 +374,48 @@ def main(argv=None):
         'action', choices=['info', 'notify'],
         help='Just display info or notify them?')
     parser.add_argument(
-        'site',
-        help='Openstack site name',
-        default='localhost')
-    parser.add_argument(
-        '--sender',
+        '--config',
         type=str,
-        help='Email address of sender.',
-        default=SENDER_EMAIL)
-    parser.add_argument(
-        '--manager_email',
-        type=str,
-        help='Email address of manager.',
-        default='help@chameleoncloud.org')
-    parser.add_argument(
-        '--exclude_projects', type=str, nargs='*',
-        help='project ID or name of the project in keycloak in lower case',
-        default=[]
+        help='JSON file with configuration for lease stacking policy'
     )
-    parser.add_argument(
-        '--high_end_node_types', type=str, nargs='*',
-        help=(
-            'high end node types for which node coverage notifications are'
-            ' needed if nothing is passed, will alert for all node_types'
-        ),
-        default=[]
-    )
-    parser.add_argument(
-        '--exclude_node_types', type=str, nargs='*',
-        help='Exclude node types from getting notified about lease stacking',
-        default=[]
-    )
-
     args = parser.parse_args(argv[1:])
-    sess = session()
+    with open(args.config) as cf_file:
+        config = json.loads(cf_file.read())
+
+    conn = openstack.connect(cloud='envvars')
+    sess = conn.session
+    blazar = BlazarClient("1", session=sess)
     print("Getting hosts")
-    hosts = blazar(sess).host.list()
+    hosts = blazar.host.list()
     print("Getting leases")
-    leases = blazar(sess).lease.list()
+    leases = blazar.lease.list()
     print("Getting allocations")
-    allocations = blazar(sess).allocation.list("os-hosts")
-    projects = keystone(sess).projects.list()
-    project_charge_code_map = {p.id: p.name.lower() for p in projects}
+    allocations = blazar.allocation.list("os-hosts")
+    projects = conn.identity.projects
+    project_charge_code_map = {p.id: p.name.lower() for p in projects()}
     json.dumps(project_charge_code_map, indent=2)
-    lcm = LeaseComplianceManager(leases, hosts, allocations)
+    lcm = LeaseComplianceManager(config, leases, hosts, allocations)
 
     for project_id in lcm.projects_by_id:
         project_name = project_charge_code_map.get(project_id, '')
         if (
-            project_id in args.exclude_projects
-            or project_name in args.exclude_projects
+            project_id in config['exclude_projects']
+            or project_name in config['exclude_projects']
         ):
             print(f"Skipping Excluded project - {project_id}")
             continue
-        violations = lcm.get_project_violations(
-            project_id, args.exclude_node_types, args.high_end_node_types
-        )
+        violations = lcm.get_project_violations(project_id)
         if not violations:
             continue
         print(f"Found lease stacking violations with Project - {project_id}")
         message = project_lease_violation_body(
-            lcm.projects_by_id[project_id], violations, project_name, args.site
+            lcm.projects_by_id[project_id], violations,
+            project_name, config['site']
         )
         if args.action == 'notify':
             notify_lease_violations(
-                project_id, message, args.manager_email, args.sender
+                project_id, message, config['manager_email'],
+                config['sender_email']
             )
         else:
             print(message)
