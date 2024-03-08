@@ -324,27 +324,27 @@ def project_lease_violation_body(project, project_violations,
     Returns:
         str: body of notification about the project violation(s)
     """
-    body = "To ChameleonCloud project manager \n\n"
-    body = f"Lease stacking violation in {site_name} \n\n"
+    body = "To ChameleonCloud project manager <br><br>"
+    body = f"Lease stacking violation in {site_name} <br><br>"
     project_id = project.project_id
     for node_type, violation in project_violations.items():
         if 'days_covered' in violation:
             body += (
                 f"Project {project_name} {project_id} has exceeded the lease stacking "
-                f"limit for node type: {node_type}\n"
+                f"limit for node type: {node_type}<br>"
             )
             body += (
-                f"\tDays covered by node type: {violation['days_covered']} / {violation['total_days']} \n\n"
+                f"\tDays covered by node type: {violation['days_covered']} / {violation['total_days']} <br><br>"
             )
         else:
             body += (
                 f"Project {project_name} {project_id} has exceeded reserving more than "
-                f"half limit for node type: {node_type}\n"
+                f"half limit for node type: {node_type}<br>"
             )
-            body += f"\tCount of nodes reserved: {violation['nodes_reserved']} / {violation['total_nodes']}\n\n"
-    body += "Leases in project \n\n"
+            body += f"\tCount of nodes reserved: {violation['nodes_reserved']} / {violation['total_nodes']}<br><br>"
+    body += "Leases in project <br><br>"
     for lease in project.leases:
-        body += f"{lease} \n\n"
+        body += f"{lease} \n\n".replace("\n", "<br>").replace(" ", "&nbsp;")
     return body
 
 
