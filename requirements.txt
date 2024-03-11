@@ -11,6 +11,8 @@ prometheus-client==0.0.13
 cmd2==0.8.9
 fabric3
 kubernetes
+openstacksdk
+pytz
 
 # dev/deploy
 invoke

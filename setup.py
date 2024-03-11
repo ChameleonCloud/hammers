@@ -25,7 +25,7 @@ setup(
             'conflict-macs = hammers.scripts.conflict_macs:main',
             'curiouser = hammers.scripts.curiouser:main',
             'dirty-ports = hammers.scripts.dirty_ports:main',
-            'lease-stack-reaper = hammers.scripts.lease_stack_reaper:main',
+            'lease-stack-notifier = hammers.scripts.lease_stack_notifier:main',
             'maintenance-reservation = hammers.scripts.maintenance_reservation:main',
             'metadata-sync = hammers.scripts.metadata_sync:main',
             'neutron-reaper = hammers.scripts.neutron_reaper:main',
