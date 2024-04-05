@@ -39,5 +39,9 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        tags: |
+          ${{ steps.meta.outputs.tags }}
+          # Add 'latest' tag for master branch
+          ${{ if(github.ref == 'refs/heads/master' && github.event_name == 'push') }} 'latest' ${{ else }} '' ${{ endif }}
+
