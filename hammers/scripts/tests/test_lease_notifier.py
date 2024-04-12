@@ -406,6 +406,52 @@ class TestLeaseComplianceManager(unittest.TestCase):
             }
         )
 
+    def test_lease_starting_late(self):
+        leases = [
+            create_lease('lease1', 50, 57),
+            create_lease('lease2', 57, 64),
+            create_lease('lease3', 64, 71),
+        ]
+        allocations = [{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease1'},
+            ]
+        }, {
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease2'},
+            ]
+        }, {
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease3'},
+            ]
+        },{
+            'resource_id': 'host1',
+            'reservations': [
+                {'lease_id': 'lease4'},
+            ]
+        }]
+        self.run_test_scenario(
+            leases,
+            'project1',
+            allocations,
+            expected_violations={
+                'compute_skylake': {'coverage_percentage': 1.0}
+            }
+        )
+        leases = [
+            create_lease('lease1', 50, 57),
+            create_lease('lease2', 57, 64),
+        ]
+        self.run_test_scenario(
+            leases,
+            'project1',
+            allocations,
+            expected_violations={}
+        )
+
     def test_lease_duration_violation_late_start(self):
         leases = [
             create_lease('lease2', 7, 14),

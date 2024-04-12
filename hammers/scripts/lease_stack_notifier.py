@@ -134,7 +134,6 @@ class Project:
         self.furthest_end_date_by_node_type = defaultdict(
             lambda: DATETIME_NOW + self.minimum_lease_window
         )
-        self.start_date_by_host = defaultdict(lambda: DATETIME_NOW)
         self.start_date_by_node_type = defaultdict(lambda: datetime.max)
 
     def __str__(self):
@@ -206,6 +205,9 @@ class Project:
                 self.furthest_end_date_by_node_type[node_type]
                 - self.start_date_by_node_type[node_type]
             ).total_seconds()
+            # if coverage period is less then minimum window days - skip
+            if seconds_in_coverage_period < self.minimum_lease_window.total_seconds():
+                continue
             coverage_percentage = seconds_covered / seconds_in_coverage_period
 
             if coverage_percentage >= lease_coverage_threshold:
