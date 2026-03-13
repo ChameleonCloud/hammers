@@ -25,10 +25,9 @@ def host_update(auth, host_id, values_payload):
     return response.json()['host']
 
 
-def leases(auth):
+def leases(auth, all_tenants=True):
     """Retrieves all leases, returning a dictionary keyed by ID"""
-    response = API.get(auth, '/leases')
-
+    response = API.get(auth, '/leases', params={'all_tenants': all_tenants})
     return {l['id']: l for l in response.json()['leases']}
 
 
