@@ -101,6 +101,9 @@ IDLE_LEASE_TERMINATION_EMAIL_BODY = '''
 
 def get_host():
     """Return email host."""
+    if os.environ.get('HAMMERS_SMTP_HOST'):
+        return os.environ['HAMMERS_SMTP_HOST']
+
     blazar_config = configparser.ConfigParser()
 
     try:
@@ -139,7 +142,24 @@ def send(email_host, to, sender, subject=None, body=None):
     msg['To'] = ','.join(to_list)
     msg.attach(MIMEText(body, 'html'))
 
+    # SMTP connection settings
+    use_ssl = os.environ.get('HAMMERS_SMTP_SSL', '').lower() == 'true'
+    port = os.environ.get('HAMMERS_SMTP_PORT')
+    if port:
+        port = int(port)
+    elif use_ssl:
+        port = 465
+    else:
+        port = 25
+    user = os.environ.get('HAMMERS_SMTP_USER')
+    password = os.environ.get('HAMMERS_SMTP_PASSWORD')
+
     # send email
-    server = smtplib.SMTP(email_host, timeout=30)
+    if use_ssl:
+        server = smtplib.SMTP_SSL(email_host, port, timeout=30)
+    else:
+        server = smtplib.SMTP(email_host, port, timeout=30)
+    if user and password:
+        server.login(user, password)
     server.sendmail(sender, to_list, msg.as_string())
     server.quit()
