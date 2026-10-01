@@ -93,6 +93,13 @@ The below cronjob assumes the OS var file is at ``/root/adminrc`` and the Slack 
       }
   }
 
+Scripts that send email (``lease-stack-notifier``, ``unutilized-lease-reaper``, ``reservation-usage-notification``) read the SMTP settings from environment variables:
+
+* ``HAMMERS_SMTP_HOST`` - SMTP relay host. If unset, ``email_relay`` from ``/etc/blazar/blazar.conf`` is used, then ``127.0.0.1``.
+* ``HAMMERS_SMTP_PORT`` - SMTP port. If unset, 465 when SSL is on, otherwise 25.
+* ``HAMMERS_SMTP_SSL`` - ``true`` to connect with SSL.
+* ``HAMMERS_SMTP_USER`` and ``HAMMERS_SMTP_PASSWORD`` - login credentials. Login is skipped if either one is unset or empty.
+
 4. Add cronjob(s) to Puppet:
 
 .. code-block:: puppet
