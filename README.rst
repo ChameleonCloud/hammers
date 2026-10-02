@@ -59,8 +59,62 @@ Common options:
 * ``--slack <json-options>`` - if provided, used to post notifications to Slack
 * ``--osrc <rc-file>`` - alternate way to feed in the OS authentication vars
 
+Building and Deploying
+======================
+
+Sites run hammers from the container image ``ghcr.io/chameleoncloud/hammers``.
+
+There are two CI workflows:
+
+* ``.github/workflows/test.yaml`` builds a wheel on pull requests and on pushes to ``master``. There are no tests yet, so this only checks that the package builds.
+* ``.github/workflows/build-image.yaml`` builds and pushes the image on pushes to ``master`` and of ``v*`` tags, and when started manually from the Actions tab ("Run workflow"). It does not wait for the wheel build.
+
+Which image tags get pushed depends on the trigger:
+
+=========================  ================================================
+Trigger                    Image tags pushed
+=========================  ================================================
+push to ``master``         ``master``, ``sha-<short commit>``
+push of tag ``vX.Y.Z``     ``vX.Y.Z``, ``sha-<short commit>``, ``latest``
+manual run on a branch     ``<branch>``, ``sha-<short commit>``
+=========================  ================================================
+
+Sites deploy a pinned ``vX.Y.Z`` tag, set in chi-in-a-box.
+
+The release version is the git tag. ``__version__`` in ``hammers/__init__.py`` is not kept up to date. The ``Jenkinsfile``, the ``Makefile`` publish target and ``tasks.py`` (PyPI) are no longer part of the release process.
+
+Releasing
+---------
+
+1. Merge your change to ``master``, and check that the Test run on ``master`` passed.
+2. Tag the release and push the tag:
+
+   .. code-block:: bash
+
+     git tag v0.3.9
+     git push origin v0.3.9
+
+3. Check that the Build image run for the tag passed, and that the new tag appears on the `package page <https://github.com/orgs/ChameleonCloud/packages/container/package/hammers>`_.
+4. In `chi-in-a-box <https://github.com/ChameleonCloud/chi-in-a-box>`_, set ``chameleon_hammers_tag: "v0.3.9"`` in ``kolla/defaults.yml``. Open a PR against each release branch that sites deploy from (currently ``chameleoncloud/2025.1``).
+5. Deploy at each site, as described below.
+
+Deploying to a site
+-------------------
+
+On the site's deploy host, pull the chi-in-a-box change that bumped the tag. Then run the hammers playbook:
+
+.. code-block:: bash
+
+  ./cc-ansible --site /opt/site-config --playbook playbooks/hammers.yml
+
+``./cc-ansible --site /opt/site-config post-deploy`` also runs it. The hammers run from systemd timers on the control node, using ``docker run``. The timers never pull a newer image, so a site keeps running the old version until the playbook runs.
+
+To try an unreleased build on a dev site, start a manual CI run on your branch. Then set ``chameleon_hammers_tag: "sha-<short commit>"`` in that site's ``defaults.yml`` and run the playbook.
+
 Setup/Config
 ============
+
+These are the original manual install steps. Sites now deploy hammers with chi-in-a-box, as described above.
 
 1. Get code
 
